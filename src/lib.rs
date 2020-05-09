@@ -49,10 +49,10 @@ pub fn run(args: Args) -> Result<(), Error> {
     let mut builder: SchemaBuilder = Schema::builder();
     // let uri = builder.add_text_field("uri", TEXT | STORED);
     let name = builder.add_text_field("name", TEXT | STORED);
-    let uri = builder.add_text_field("comment", STRING);
+    let uri = builder.add_text_field("comment", STRING | STORED);
     let type_ = builder.add_text_field("type", STRING | STORED);
     let body = builder.add_text_field("body", TEXT | STORED);
-    let comment = builder.add_text_field("comment", TEXT);
+    let comment = builder.add_text_field("comment", TEXT | STORED);
     let discovered = builder.add_date_field("discovered", INDEXED | STORED);
 
     // dated (for specific date to be read on / associated event or time)
@@ -99,7 +99,10 @@ pub fn run(args: Args) -> Result<(), Error> {
                 doc.add_text(comment, item_comment);
             }
 
-            println!("{:?}", doc);
+            let now = Utc::now();
+            doc.add_date(discovered, &now);
+
+            println!("{:#?}", doc);
 
             index_writer.add_document(doc);
             index_writer.commit()?;
@@ -133,55 +136,75 @@ pub fn run(args: Args) -> Result<(), Error> {
     Ok(())
 }
 
+// Document { field_values: [
+// FieldValue { field: Field(0), value: Str("Cool Article") },
+// FieldValue { field: Field(1), value: Str("file:://cool.article") },
+// FieldValue { field: Field(3), value: Str("This is the coolest thing ever!") },
+// FieldValue { field: Field(2), value: Str("article") },
+// FieldValue { field: Field(4), value: Str("Should really check this out") }] }
+
 fn print_document(doc: &Document) {
     use colored::*;
+    use std::fmt::Write;
 
-    let mut output = String::new();
+    // println!("{:?}", doc);
 
     let mut title_string = String::new();
-
     if let Some(type_) = doc.get_first(Field::from_field_id(2)) {
         title_string.push_str(match type_.text().unwrap() {
-            "article" => "article",
+            "article" => "Article ",
+            t => t,
         })
     }
 
     if let Some(name) = doc.get_first(Field::from_field_id(0)) {
-        title_string.push_str(&name.text().unwrap().underline().red().to_string());
-        title_string.push_str(": ");
+        writeln!(
+            &mut title_string,
+            "{}:",
+            name.text().unwrap().underline().red()
+        )
+        .unwrap();
+    } else {
+        println!("No title");
     }
 
-    // let name = doc.get_first(Field::from_field_id(0)).unwrap();
-    // let type_ = doc.get_first(Field::from_field_id(1)).unwrap();
-    // let body = doc.get_first(Field::from_field_id(2)).unwrap();
-    // let discovered = doc.get_first(Field::from_field_id(3)).unwrap();
+    let mut body_string = String::new();
 
-    // let mut title_string = String::new();
+    if let Some(body) = doc.get_first(Field::from_field_id(3)) {
+        writeln!(&mut body_string, "{} {}", "\t", body.text().unwrap()).unwrap();
+    } else {
+        println!("No body");
+    }
 
-    // if let Some(name_text) = name.text() {
-    //     if name_text.is_empty() {
-    //         title_string.push_str("N/A");
-    //     } else {
-    //         title_string.push_str(name_text);
-    //     }
+    if let Some(comment) = doc.get_first(Field::from_field_id(4)) {
+        writeln!(
+            &mut body_string,
+            "{} {}",
+            "\t",
+            comment.text().unwrap().green()
+        )
+        .unwrap();
+    } else {
+        println!("No comment");
+    }
 
-    //     title_string.push_str(": ");
-    // } else {
-    //     title_string.push('^');
-    // }
+    if let Some(uri) = doc.get_first(Field::from_field_id(1)) {
+        writeln!(&mut body_string, "{} {}", "\t", uri.text().unwrap().blue()).unwrap();
+    } else {
+        println!("No URI");
+    }
 
-    // let mut title_string = title_string.red().bold().underline().to_string();
+    if let Some(discovered) = doc.get_first(Field::from_field_id(5)) {
+        writeln!(
+            &mut body_string,
+            "{} {}",
+            "\t",
+            discovered.date_value().format("%a %d, %Y").to_string()
+        )
+        .unwrap();
+    } else {
+        println!("No time");
+    }
 
-    // title_string.push_str(type_.text().unwrap_or_default());
-
-    // let mut body_string = "\t- ".to_string();
-    // body_string.push_str(match body.text().unwrap_or_default() {
-    //     "" => "N/A",
-    //     b => b,
-    // });
-
-    // let mut date_found = String::from("\t- ");
-    // date_found.push_str(&discovered.date_value().format("%b %e, %Y").to_string());
-
-    // println!("{}\n{}\n{}", title_string, body_string, date_found.blue());
+    print!("{}{}", title_string, body_string);
 }
