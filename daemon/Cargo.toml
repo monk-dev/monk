@@ -1,0 +1,20 @@
+[package]
+name = "daemon"
+version = "0.1.0"
+authors = ["Fisher Darling <fdarlingco@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# crossbeam-channel = "*"
+tokio = { version = "*", features = ["full"] }
+tokio-serde = { version = "*", features = ["json"] }
+tokio-util = { version = "*", features = ["codec"] }
+futures = "*"
+url =   { version = "*", features = ["serde"] }
+chrono = { version = "*", features = ["serde"] }
+anyhow = "*"
+thiserror = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
