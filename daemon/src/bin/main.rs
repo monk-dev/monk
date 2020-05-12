@@ -1,84 +1,32 @@
-use daemon::metadata::{Meta, MetaStore};
-use daemon::request::Request;
-use daemon::server::Server;
-
-use std::fs::File;
-use std::io::BufWriter;
+use std::path::PathBuf;
 
 use anyhow::Result;
-use chrono::Utc;
-use serde_json::Serializer;
-use tokio::{main, stream::StreamExt};
+use config::{Config, Environment, File};
+use structopt::StructOpt;
 
-async fn send_commands() {
-    use futures::sink::SinkExt;
-    use std::time::Duration;
-    use tokio::net::TcpStream;
-    use tokio_serde::formats::*;
-    use tokio_util::codec::{FramedWrite, LengthDelimitedCodec};
-    use url::Url;
+use daemon::settings::Settings;
 
-    tokio::time::delay_for(Duration::from_secs(1)).await;
-
-    let server = TcpStream::connect("127.0.0.1:8888").await.unwrap();
-    let length_delimited = FramedWrite::new(server, LengthDelimitedCodec::new());
-
-    let mut serialized = tokio_serde::SymmetricallyFramed::new(
-        length_delimited,
-        SymmetricalJson::<Request>::default(),
-    );
-
-    for i in 110..113usize {
-        tokio::time::delay_for(Duration::from_secs(1)).await;
-
-        let request = Request::Add {
-            name: i.to_string(),
-            url: Url::parse("file://request.file/path").unwrap(),
-        };
-
-        serialized.send(request).await.unwrap();
-    }
-
-    tokio::time::delay_for(Duration::from_secs(1)).await;
-
-    serialized.send(Request::Stop).await.unwrap();
+#[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
+pub struct Args {
+    #[structopt(short, long, default_value = "./daemon.yaml")]
+    config: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut store = MetaStore::empty();
+    tracing_subscriber::fmt::init();
 
-    for i in 0..2 {
-        let meta = Meta::new(i.to_string(), "file://file.com/file", Utc::now())?;
-        store.push(meta);
-    }
+    let args = Args::from_args();
 
-    let _ = tokio::task::spawn_blocking(move || store.write_file("store.json")).await?;
+    let mut config = Config::default();
+    config.merge(File::with_name(&args.config))?;
+    config.merge(Environment::with_prefix("daemon"))?;
 
-    let mut store = tokio::task::spawn_blocking(|| MetaStore::read_file("store.json")).await??;
+    let settings: Settings = config.try_into()?;
 
-    let mut rx = Server::spawn("127.0.0.1:8888").await?;
+    tracing::info!("{:?}", settings);
 
-    tokio::spawn(send_commands());
-
-    while let Some(msg) = rx.next().await {
-        println!("Received: {:?}", msg);
-
-        match msg? {
-            Request::Add { name, url } => {
-                let now = Utc::now();
-                store.push(Meta::new(name, url.as_str(), now)?);
-            }
-            l @ Request::List { .. } => {
-                println!("Received a {:?}", l);
-            }
-            Request::Stop => {
-                break;
-            }
-        }
-    }
-
-    println!("{:#?}", store);
+    daemon::run(settings).await?;
 
     Ok(())
 }

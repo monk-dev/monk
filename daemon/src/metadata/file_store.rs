@@ -5,31 +5,44 @@
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::path::Path;
-
-use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use tracing::{info, instrument};
 
 use super::meta::Meta;
+use crate::error::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct MetaStore(Vec<Meta>);
+pub struct FileStore {
+    metadata: Vec<Meta>,
+    #[serde(skip)]
+    file: Option<PathBuf>,
+    #[serde(skip)]
+    dirty: bool,
+}
 
-impl MetaStore {
+impl FileStore {
     pub fn empty() -> Self {
-        Self(Vec::new())
+        Self {
+            metadata: Vec::new(),
+            file: None,
+            dirty: false,
+        }
     }
 
     pub fn push(&mut self, meta: Meta) {
-        self.0.push(meta);
+        self.dirty = true;
+        self.metadata.push(meta);
     }
 
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self> {
-        let file = File::open(path)?;
+        let file = File::open(&path)?;
         let reader = BufReader::new(file);
 
-        let store = serde_json::from_reader(reader)?;
+        let mut store: FileStore = serde_json::from_reader(reader)?;
+        store.file = Some(path.as_ref().into());
 
         Ok(store)
     }
@@ -39,6 +52,21 @@ impl MetaStore {
         let writer = BufWriter::new(file);
 
         serde_json::to_writer(writer, self)?;
+
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    pub fn commit(&mut self) -> Result<()> {
+        if self.dirty {
+            info!("FileStore dirty");
+            let path = self.file.as_ref().ok_or_else(|| Error::FileStoreNoPath)?;
+            self.write_file(path)?;
+
+            self.dirty = false;
+        } else {
+            info!("FileStore clean");
+        }
 
         Ok(())
     }
@@ -53,7 +81,7 @@ impl MetaStore {
     //         metadata.push(data);
     //     }
 
-    //     Ok(MetaStore {
+    //     Ok(FileStore {
     //         metadata
     //     })
     // }
@@ -74,4 +102,10 @@ impl MetaStore {
 
     //     Ok(())
     // }
+}
+
+impl Drop for FileStore {
+    fn drop(&mut self) {
+        self.commit().unwrap();
+    }
 }

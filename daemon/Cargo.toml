@@ -18,3 +18,9 @@ anyhow = "*"
 thiserror = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+rand = "0.7.3"
+tracing = "*"
+tracing-subscriber = { version = "*", features = ["fmt", "parking_lot"] }
+tracing-futures = "*"
+config = "*"
+structopt = "*"
