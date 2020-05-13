@@ -8,7 +8,7 @@ use daemon::settings::Settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
-    #[structopt(short, long, default_value = "./daemon.yaml")]
+    #[structopt(short, long, default_value = "./daemon/daemon.yaml")]
     config: String,
 }
 

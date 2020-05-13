@@ -3,12 +3,10 @@ use std::net::IpAddr;
 
 /// The main Daemon settings. Defaults are:
 /// address: 127.0.0.1:8888
-/// timeout: 1000
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     address: IpAddr,
-    port: u16,
-    timeout: usize,
+    // timeout: usize,
 }
 
 impl Settings {
@@ -16,21 +14,15 @@ impl Settings {
         &self.address
     }
 
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-
-    pub fn timeout(&self) -> usize {
-        self.timeout
-    }
+    // pub fn timeout(&self) -> usize {
+    //     self.timeout
+    // }
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1".parse().unwrap(),
-            port: 8888,
-            timeout: 1000,
+            address: "127.0.0.1:8888".parse().unwrap(),
         }
     }
 }

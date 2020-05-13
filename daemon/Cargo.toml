@@ -9,8 +9,6 @@ edition = "2018"
 [dependencies]
 # crossbeam-channel = "*"
 tokio = { version = "*", features = ["full"] }
-tokio-serde = { version = "*", features = ["json"] }
-tokio-util = { version = "*", features = ["codec"] }
 futures = "*"
 url =   { version = "*", features = ["serde"] }
 chrono = { version = "*", features = ["serde"] }
@@ -24,3 +22,4 @@ tracing-subscriber = { version = "*", features = ["fmt", "parking_lot"] }
 tracing-futures = "*"
 config = "*"
 structopt = "*"
+warp = "*"

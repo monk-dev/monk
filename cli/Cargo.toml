@@ -18,3 +18,7 @@ thiserror = "*"
 failure = "*"
 colored = "*"
 daemon = { path = "../daemon" }
+serde = { version = "1.0", features = ["derive"] }
+config = "*"
+reqwest = { verison = "*", features = ["json"] }
+tokio = "*"

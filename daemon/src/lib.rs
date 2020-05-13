@@ -2,16 +2,19 @@
 
 pub mod error;
 pub mod metadata;
-pub mod request;
 pub mod server;
 pub mod settings;
 
 use anyhow::Result;
 
 use crate::metadata::{FileStore, Meta};
-use crate::request::{CliRequest, RequestBody};
-use crate::server::Server;
+use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
+
+use std::net::SocketAddr;
+use std::time::Duration;
+use tokio::sync::{mpsc, oneshot};
+use tokio::time::timeout;
 
 #[tracing::instrument(skip(settings))]
 pub async fn run(settings: Settings) -> Result<()> {
@@ -19,31 +22,89 @@ pub async fn run(settings: Settings) -> Result<()> {
     use tokio::stream::StreamExt;
     use tracing::{info, span, Level};
 
-    let mut store = tokio::task::spawn_blocking(|| FileStore::read_file("store.json")).await??;
+    let (sender, mut receiver) = mpsc::channel(100);
+    let (shutdown, signal) = oneshot::channel::<()>();
 
-    let mut rx = Server::spawn("127.0.0.1:8888").await?;
+    let addr = SocketAddr::new(*settings.address(), settings.port());
 
-    tokio::spawn(send_commands());
+    tokio::spawn(Server::spawn(addr, sender, signal));
 
-    while let Some(msg) = rx.next().await {
-        info!("Received: {:?}", msg);
+    let timeout_duration = Duration::from_millis(settings.timeout() as u64);
 
-        match msg?.body() {
-            RequestBody::Add { name, url } => {
-                let now = Utc::now();
-                store.push(Meta::new(name, url.as_str(), now)?);
+    loop {
+        info!("looping");
+        let request = timeout(timeout_duration, receiver.next()).await;
+
+        if let Ok(Some((request, response))) = request {
+            match request {
+                Request::Add { name, url } => {
+                    tracing::info!("[add] {} {}", name, url);
+                    response.send(Response::Ok).ok();
+                }
+                Request::List { count } => {
+                    tracing::info!("[list] {:?}", count);
+                    response.send(Response::Ok).ok();
+                }
+                Request::Stop => {
+                    tracing::info!("[stop]");
+                    tracing::debug!(
+                        "Server is shutting down after {:3.1} s.",
+                        timeout_duration.as_secs_f32()
+                    );
+                    response.send(Response::Ok).ok();
+                    let _ = shutdown.send(());
+                    break;
+                }
             }
-            l @ RequestBody::List { .. } => {
-                info!("Received a {:?}", l);
-            }
-            RequestBody::Stop => {
-                info!("Received a Stop");
-                break;
-            }
+        } else if let Ok(None) = request {
+            continue;
+        } else {
+            tracing::info!(
+                "Server is shutting down after {:3.4} s.",
+                timeout_duration.as_secs_f32()
+            );
+            let _ = shutdown.send(());
+            break;
         }
     }
 
-    println!("{:#?}", store);
+    // let mut store = tokio::task::spawn_blocking(|| FileStore::read_file("store.json")).await??;
+
+    // tokio::spawn(send_commands());
+
+    // loop {
+    //     let msg = timeout(timeout_duration, rx.next()).await;
+
+    //     match msg {
+    //         Ok(Some(msg)) => {
+    //             info!("Received: {:?}", msg);
+
+    //             match msg?.body() {
+    //                 RequestBody::Add { name, url } => {
+    //                     let now = Utc::now();
+    //                     store.push(Meta::new(name, url.as_str(), now)?);
+    //                 }
+    //                 l @ RequestBody::List { .. } => {
+    //                     info!("Received a {:?}", l);
+    //                 }
+    //                 RequestBody::Stop => {
+    //                     info!("Received a Stop");
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //         Ok(None) => continue,
+    //         Err(_) => {
+    //             tracing::info!(
+    //                 "Server is shutting down after {:3.4} s.",
+    //                 timeout_duration.as_secs_f32()
+    //             );
+    //             break;
+    //         }
+    //     }
+    // }
+
+    // println!("{:#?}", store);
 
     Ok(())
 }
@@ -59,39 +120,39 @@ pub fn generate_id() -> String {
         .collect()
 }
 
-async fn send_commands() {
-    use futures::sink::SinkExt;
-    use std::time::Duration;
-    use tokio::net::TcpStream;
-    use tokio_serde::formats::*;
-    use tokio_util::codec::{FramedWrite, LengthDelimitedCodec};
-    use url::Url;
+// async fn send_commands() {
+//     use futures::sink::SinkExt;
+//     use std::time::Duration;
+//     use tokio::net::TcpStream;
+//     use tokio_serde::formats::*;
+//     use tokio_util::codec::{FramedWrite, LengthDelimitedCodec};
+//     use url::Url;
 
-    tokio::time::delay_for(Duration::from_secs(1)).await;
+//     tokio::time::delay_for(Duration::from_secs(1)).await;
 
-    let server = TcpStream::connect("127.0.0.1:8888").await.unwrap();
-    let length_delimited = FramedWrite::new(server, LengthDelimitedCodec::new());
+//     let server = TcpStream::connect("127.0.0.1:8888").await.unwrap();
+//     let length_delimited = FramedWrite::new(server, LengthDelimitedCodec::new());
 
-    let mut serialized = tokio_serde::SymmetricallyFramed::new(
-        length_delimited,
-        SymmetricalJson::<RequestBody>::default(),
-    );
+//     let mut serialized = tokio_serde::SymmetricallyFramed::new(
+//         length_delimited,
+//         SymmetricalJson::<RequestBody>::default(),
+//     );
 
-    for i in 110..113usize {
-        tokio::time::delay_for(Duration::from_secs(1)).await;
+//     for i in 110..113usize {
+//         tokio::time::delay_for(Duration::from_secs(1)).await;
 
-        let body = RequestBody::Add {
-            name: i.to_string(),
-            url: Url::parse("file://request.file/path").unwrap(),
-        };
+//         let body = RequestBody::Add {
+//             name: i.to_string(),
+//             url: Url::parse("file://request.file/path").unwrap(),
+//         };
 
-        serialized.send(body).await.unwrap();
-    }
+//         serialized.send(body).await.unwrap();
+//     }
 
-    tokio::time::delay_for(Duration::from_secs(1)).await;
+//     tokio::time::delay_for(Duration::from_secs(1)).await;
 
-    serialized.send(RequestBody::Stop).await.unwrap();
-}
+//     serialized.send(RequestBody::Stop).await.unwrap();
+// }
 
 // let mut builder: SchemaBuilder = Schema::builder();
 //     // let uri = builder.add_text_field("uri", TEXT | STORED);
