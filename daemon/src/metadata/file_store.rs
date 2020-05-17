@@ -17,7 +17,7 @@ use crate::error::Error;
 pub struct FileStore {
     metadata: Vec<Meta>,
     #[serde(skip)]
-    file: Option<PathBuf>,
+    file: PathBuf,
     #[serde(skip)]
     dirty: bool,
 }
@@ -26,7 +26,7 @@ impl FileStore {
     pub fn empty() -> Self {
         Self {
             metadata: Vec::new(),
-            file: None,
+            file: PathBuf::new(),
             dirty: false,
         }
     }
@@ -44,6 +44,10 @@ impl FileStore {
         }
     }
 
+    pub fn file(&self) -> &Path {
+        &self.file
+    }
+
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         check_path(&path)?;
 
@@ -51,7 +55,7 @@ impl FileStore {
         let reader = BufReader::new(file);
 
         let mut store: FileStore = serde_json::from_reader(reader)?;
-        store.file = Some(path.as_ref().into());
+        store.file = path.as_ref().into();
         store.metadata.sort_by(|l, r| l.id().cmp(r.id()));
 
         Ok(store)
@@ -99,13 +103,12 @@ impl FileStore {
     #[instrument(skip(self))]
     pub fn commit(&mut self) -> Result<(), Error> {
         if self.dirty {
-            info!("FileStore dirty");
-            let path = self.file.as_ref().ok_or_else(|| Error::FileStoreNoPath)?;
-            self.write_file(path)?;
+            info!("FileStore dirty: {}", self.file().display());
 
+            self.write_file(self.file())?;
             self.dirty = false;
         } else {
-            info!("FileStore clean");
+            info!("FileStore clean: {}", self.file().display());
         }
 
         Ok(())

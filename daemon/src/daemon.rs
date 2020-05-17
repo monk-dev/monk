@@ -3,16 +3,34 @@ use crate::metadata::{FileStore, Meta};
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub struct Daemon<'s> {
-    store: RwLock<FileStore>,
+    store: Arc<RwLock<FileStore>>,
     settings: &'s Settings,
 }
 
 impl<'s> Daemon<'s> {
     pub fn new(settings: &'s Settings) -> Result<Self, Error> {
-        let store = RwLock::new(FileStore::read_file(&settings.store())?);
+        let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store())?));
+
+        let store_clone = store.clone();
+        let delay =
+            std::time::Duration::from_millis(std::cmp::max(settings.timeout() / 3, 3) as u64);
+
+        tokio::spawn(async move {
+            tracing::info!("Auto Commit Delay: {:3.1} s.", delay.as_secs_f32());
+            loop {
+                tokio::time::delay_for(delay).await;
+
+                let _ = store_clone
+                    .write()
+                    .await
+                    .commit()
+                    .map_err(|e| tracing::error!("FileStore: {}", e));
+            }
+        });
 
         Ok(Self { store, settings })
     }
