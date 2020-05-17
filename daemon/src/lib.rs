@@ -1,5 +1,6 @@
-#![feature(result_flattening)]
+#![feature(result_flattening, with_options)]
 
+pub mod daemon;
 pub mod error;
 pub mod metadata;
 pub mod server;
@@ -7,6 +8,7 @@ pub mod settings;
 
 use anyhow::Result;
 
+use crate::daemon::Daemon;
 use crate::metadata::{FileStore, Meta};
 use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
@@ -28,34 +30,18 @@ pub async fn run(settings: Settings) -> Result<()> {
     let addr = SocketAddr::new(*settings.address(), settings.port());
 
     tokio::spawn(Server::spawn(addr, sender, signal));
-
     let timeout_duration = Duration::from_millis(settings.timeout() as u64);
 
+    let mut daemon = Daemon::new(&settings)?;
+
     loop {
-        info!("looping");
         let request = timeout(timeout_duration, receiver.next()).await;
 
         if let Ok(Some((request, response))) = request {
-            match request {
-                Request::Add { name, url } => {
-                    tracing::info!("[add] {} {}", name, url);
-                    response.send(Response::Ok).ok();
-                }
-                Request::List { count } => {
-                    tracing::info!("[list] {:?}", count);
-                    response.send(Response::Ok).ok();
-                }
-                Request::Stop => {
-                    tracing::info!("[stop]");
-                    tracing::debug!(
-                        "Server is shutting down after {:3.1} s.",
-                        timeout_duration.as_secs_f32()
-                    );
-                    response.send(Response::Ok).ok();
-                    let _ = shutdown.send(());
-                    break;
-                }
-            }
+            // if let Request::Stop =
+
+            let res = daemon.handle_request(request).await?;
+            let _ = response.send(res);
         } else if let Ok(None) = request {
             continue;
         } else {
@@ -68,43 +54,7 @@ pub async fn run(settings: Settings) -> Result<()> {
         }
     }
 
-    // let mut store = tokio::task::spawn_blocking(|| FileStore::read_file("store.json")).await??;
-
-    // tokio::spawn(send_commands());
-
-    // loop {
-    //     let msg = timeout(timeout_duration, rx.next()).await;
-
-    //     match msg {
-    //         Ok(Some(msg)) => {
-    //             info!("Received: {:?}", msg);
-
-    //             match msg?.body() {
-    //                 RequestBody::Add { name, url } => {
-    //                     let now = Utc::now();
-    //                     store.push(Meta::new(name, url.as_str(), now)?);
-    //                 }
-    //                 l @ RequestBody::List { .. } => {
-    //                     info!("Received a {:?}", l);
-    //                 }
-    //                 RequestBody::Stop => {
-    //                     info!("Received a Stop");
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //         Ok(None) => continue,
-    //         Err(_) => {
-    //             tracing::info!(
-    //                 "Server is shutting down after {:3.4} s.",
-    //                 timeout_duration.as_secs_f32()
-    //             );
-    //             break;
-    //         }
-    //     }
-    // }
-
-    // println!("{:#?}", store);
+    daemon.shutdown().await?;
 
     Ok(())
 }

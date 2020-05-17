@@ -16,6 +16,10 @@ pub enum Error {
     ConfigError(#[from] ConfigError),
     #[error("Tokio oneshot Recv Error: {0}")]
     RecvError(#[from] RecvError),
+    #[error("Meta with ID already exists: {0}")]
+    AlreadyExists(String),
+    #[error("JSON Error: {0}")]
+    JsonError(#[from] serde_json::Error),
     #[error("Custom: {0}")]
     Custom(String),
 }

@@ -1,29 +1,20 @@
-use cli::{error::Error, Args};
+use config::{Config, Environment, File};
 use structopt::StructOpt;
 
-use daemon::server::{request::Request, response::Response};
+use cli::settings::Settings;
+use cli::{args::Args, cli::Cli, error::Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // let args = Args::from_args();
+    let args = Args::from_args();
 
-    let request = Request::Add {
-        name: "Operating Systems".into(),
-        url: "https://memes.are.dreams".parse().unwrap(),
-    };
+    let mut config = Config::default();
+    config.merge(File::with_name(&args.config.to_str().unwrap()))?;
+    config.merge(Environment::with_prefix("sack_cli"))?;
 
-    let response: Response = reqwest::Client::new()
-        .get("http://127.0.0.1:8888/add")
-        .json(&request)
-        .send()
-        .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+    let settings: Settings = config.try_into()?;
 
-    println!("[resp] {:?}", response);
+    Cli::run(settings, args).await?;
 
-    // cli::run(args)
     Ok(())
 }

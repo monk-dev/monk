@@ -5,10 +5,16 @@ use tantivy::{directory::error::OpenDirectoryError, TantivyError};
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Tantivy Error: {}", 0)]
+    #[error("Tantivy Error: {0}")]
     Tantivy(#[from] Compat<TantivyError>),
-    #[error("Tantivy Error: {}", 0)]
+    #[error("Tantivy Error: {0}")]
     TantivyOpenDirectory(#[from] Compat<OpenDirectoryError>),
+    #[error("Configuration Parse Error: {0}")]
+    Config(#[from] config::ConfigError),
+    #[error("Url Parsing Error: {0}")]
+    UrlParseError(#[from] url::ParseError),
+    #[error("Reqwest Error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
 }
 
 impl From<TantivyError> for Error {

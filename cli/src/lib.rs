@@ -1,3 +1,5 @@
+pub mod args;
+pub mod cli;
 pub mod error;
 pub mod schema;
 pub mod settings;
@@ -16,39 +18,12 @@ use tantivy::{
 
 use crate::error::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
-pub enum Args {
-    /// Add an item to the database
-    Add {
-        /// The name of the item
-        // #[structopt()]
-        name: String,
-        /// The uri of the item
-        #[structopt(short, long)]
-        uri: Option<String>,
-        /// The body of the item
-        #[structopt(short, long)]
-        body: Option<String>,
-        /// The type of item: article, project, newsletter, forum, repo
-        #[structopt(name = "type", short, long)]
-        ty: Option<String>,
-        /// Any associated comment for the item
-        #[structopt(short, long)]
-        comment: Option<String>,
-    },
-    /// List all items in the database
-    List {
-        #[structopt(short, long, default_value = "0")]
-        count: usize,
-    },
-}
+// pub fn run(args: Args) -> Result<(), Error> {
+//     // #![allow(unused_must_use)]
+//     // std::fs::create_dir("tantivy");
 
-pub fn run(args: Args) -> Result<(), Error> {
-    // #![allow(unused_must_use)]
-    // std::fs::create_dir("tantivy");
-
-    Ok(())
-}
+//     Ok(())
+// }
 
 // Document { field_values: [
 // FieldValue { field: Field(0), value: Str("Cool Article") },
