@@ -1,4 +1,4 @@
 address: 127.0.0.1
 port: 8888
-timeout: 100000
+timeout: 50000 # 50 seconds
 store: ./store.json

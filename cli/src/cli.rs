@@ -16,7 +16,7 @@ impl Cli {
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
 
                 Request::Add {
-                    name: name.clone(),
+                    name: Some(name.clone()),
                     url,
                 }
             }

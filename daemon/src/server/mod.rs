@@ -3,18 +3,13 @@ pub mod response;
 
 use self::request::Request;
 use self::response::Response;
-use crate::error::Error;
 
 use std::net::SocketAddr;
 
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 
-use warp::{
-    http::Response as HttpResponse,
-    reply::{json, Json},
-    Filter,
-};
+use warp::{reply::json, Filter};
 
 pub struct Server;
 

@@ -6,11 +6,13 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 use tracing::{info, instrument};
 
-use super::meta::Meta;
+use super::Meta;
 use crate::error::Error;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -84,6 +86,19 @@ impl FileStore {
         e
     }
 
+    pub fn update(&mut self, id: impl AsRef<str>, data: Meta) -> Result<(), Error> {
+        if id.as_ref() != data.id {
+            return Err(Error::UnequalIds);
+        }
+
+        if let Some(meta) = self.get_mut(&id) {
+            *meta = data;
+            Ok(())
+        } else {
+            Err(Error::IdNotFound(id.as_ref().to_string()))
+        }
+    }
+
     pub fn delete(&mut self, id: impl AsRef<str>) -> Option<Meta> {
         let (idx, _) = self
             .metadata
@@ -116,6 +131,24 @@ impl FileStore {
 
     pub fn is_dirty(&self) -> bool {
         self.dirty
+    }
+
+    pub async fn commit_loop(
+        handle: Arc<RwLock<FileStore>>,
+        delay: std::time::Duration,
+    ) -> Result<(), Error> {
+        tracing::info!("Auto Commit Delay: {:3.1} s.", delay.as_secs_f32());
+        loop {
+            tokio::time::delay_for(delay).await;
+
+            handle
+                .write()
+                .await
+                .commit()
+                .map_err(|e| tracing::error!("FileStore: {}", e));
+        }
+
+        Ok(())
     }
 
     // pub async fn read_file(path: impl AsRef<Path>) -> Result<Self> {
@@ -151,6 +184,12 @@ impl FileStore {
     // }
 }
 
+impl Drop for FileStore {
+    fn drop(&mut self) {
+        self.commit().unwrap();
+    }
+}
+
 fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
     let file = File::with_options()
         .read(true)
@@ -162,16 +201,10 @@ fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
 
     if file.metadata()?.len() == 0 {
         let default_store = FileStore::default();
-        default_store.write_file(path);
+        default_store.write_file(path)?;
     }
 
     file.sync_all()?;
 
     Ok(())
-}
-
-impl Drop for FileStore {
-    fn drop(&mut self) {
-        self.commit().unwrap();
-    }
 }

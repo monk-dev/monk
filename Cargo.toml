@@ -1,5 +1,6 @@
 [workspace]
 members = ["cli", "daemon"]
+exclude = ["monolith"]
 
 [profile.release]
 opt-level = 3

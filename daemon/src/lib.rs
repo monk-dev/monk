@@ -9,20 +9,19 @@ pub mod settings;
 use anyhow::Result;
 
 use crate::daemon::Daemon;
-use crate::metadata::{FileStore, Meta};
 use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
 
 use std::net::SocketAddr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
 
 #[tracing::instrument(skip(settings))]
 pub async fn run(settings: Settings) -> Result<()> {
-    use chrono::Utc;
     use tokio::stream::StreamExt;
-    use tracing::{info, span, Level};
+
+    let start_time = Instant::now();
 
     let (sender, mut receiver) = mpsc::channel(100);
     let (shutdown, signal) = oneshot::channel::<()>();
@@ -34,20 +33,31 @@ pub async fn run(settings: Settings) -> Result<()> {
 
     let mut daemon = Daemon::new(&settings)?;
 
-    loop {
+    'main: loop {
         let request = timeout(timeout_duration, receiver.next()).await;
 
         if let Ok(Some((request, response))) = request {
-            // if let Request::Stop =
+            if let Request::Stop = request {
+                tracing::info!("Stop Request Received");
+                tracing::info!(
+                    "Server is shutting down after {:3.4} s.",
+                    start_time.elapsed().as_secs_f32()
+                );
+
+                let _ = response.send(Response::Ok);
+                let _ = shutdown.send(());
+                break 'main;
+            }
 
             let res = daemon.handle_request(request).await?;
             let _ = response.send(res);
         } else if let Ok(None) = request {
             continue;
         } else {
+            tracing::info!("Timeout Reached");
             tracing::info!(
                 "Server is shutting down after {:3.4} s.",
-                timeout_duration.as_secs_f32()
+                start_time.elapsed().as_secs_f32()
             );
             let _ = shutdown.send(());
             break;
@@ -59,7 +69,6 @@ pub async fn run(settings: Settings) -> Result<()> {
     Ok(())
 }
 
-#[tracing::instrument]
 pub fn generate_id() -> String {
     use rand::{distributions::Alphanumeric, thread_rng, Rng};
 

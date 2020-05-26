@@ -10,12 +10,18 @@ pub struct Settings {
     address: IpAddr,
     port: u16,
     timeout: usize,
-    #[serde(default = "default_path")]
+    #[serde(default = "default_store")]
     store: PathBuf,
+    #[serde(default = "default_offline")]
+    offline: PathBuf,
 }
 
-fn default_path() -> PathBuf {
+fn default_store() -> PathBuf {
     PathBuf::from("./store.json")
+}
+
+fn default_offline() -> PathBuf {
+    PathBuf::from("./offline.json")
 }
 
 impl Settings {
@@ -34,6 +40,10 @@ impl Settings {
     pub fn store(&self) -> &Path {
         &self.store
     }
+
+    pub fn offline(&self) -> &Path {
+        &self.offline
+    }
 }
 
 impl Default for Settings {
@@ -42,7 +52,8 @@ impl Default for Settings {
             address: "127.0.0.1".parse().unwrap(),
             port: 8888,
             timeout: 1000,
-            store: default_path(),
+            store: default_store(),
+            offline: default_offline(),
         }
     }
 }

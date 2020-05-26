@@ -20,6 +20,10 @@ pub enum Error {
     AlreadyExists(String),
     #[error("JSON Error: {0}")]
     JsonError(#[from] serde_json::Error),
+    #[error("Attempted to update with unequal IDs")]
+    UnequalIds,
+    #[error("ID Not found: {0}")]
+    IdNotFound(String),
     #[error("Custom: {0}")]
     Custom(String),
 }

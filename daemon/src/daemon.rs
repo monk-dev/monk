@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::metadata::{FileStore, Meta};
+use crate::metadata::{FileStore, Meta, OfflineData, OfflineStore};
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
@@ -8,12 +8,14 @@ use tokio::sync::RwLock;
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
+    offline: Arc<RwLock<OfflineStore>>,
     settings: &'s Settings,
 }
 
 impl<'s> Daemon<'s> {
     pub fn new(settings: &'s Settings) -> Result<Self, Error> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store())?));
+        let offline = Arc::new(RwLock::new(OfflineStore::read_file(&settings.offline())?));
 
         let store_clone = store.clone();
         let delay =
@@ -38,8 +40,13 @@ impl<'s> Daemon<'s> {
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
         match req {
             Request::Add { name, url } => {
-                tracing::info!("[add] {} {:?}", name, url);
-                let mut builder = Meta::builder(name);
+                tracing::info!("[add] {:?} {:?}", name, url);
+                let mut builder = Meta::builder();
+
+                if let Some(name) = name {
+                    builder = builder.name(name);
+                }
+
                 if let Some(url) = url {
                     builder = builder.url(url);
                 }
@@ -76,13 +83,8 @@ impl<'s> Daemon<'s> {
                 Some(m) => Ok(Response::Item(m.clone())),
                 None => Ok(Response::NotFound(id)),
             },
-            Request::Stop => {
-                tracing::info!("Daemon cannot handle Request::Stop");
-
-                Ok(Response::Ok)
-            }
             r => {
-                tracing::warn!("Unimplemented Request: {:?}", r);
+                tracing::warn!("Unimplemented Daemon Request: {:?}", r);
 
                 Ok(Response::Unhandled)
             }
