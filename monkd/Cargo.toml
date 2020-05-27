@@ -1,5 +1,5 @@
 [package]
-name = "daemon"
+name = "monkd"
 version = "0.1.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>"]
 edition = "2018"
@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "daemon"
-path = "./src/bin/main.rs"
+name = "monkd"
+path = "./src/bin/monkd.rs"
 
 [dependencies]
 # crossbeam-channel = "*"
@@ -18,7 +18,7 @@ url =   { version = "*", features = ["serde"] }
 chrono = { version = "*", features = ["serde"] }
 anyhow = "*"
 thiserror = "*"
-serde = { version = "*", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 rand = "0.7.3"
 tracing = "*"
@@ -27,3 +27,4 @@ tracing-futures = "*"
 config = "*"
 structopt = "*"
 warp = "*"
+tantivy = { git = "https://github.com/tantivy-search/tantivy.git" }

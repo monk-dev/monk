@@ -24,6 +24,9 @@ pub enum Error {
     UnequalIds,
     #[error("ID Not found: {0}")]
     IdNotFound(String),
+    // #[err("")]
+    #[error("Tantivy Error: {0}")]
+    Tantivy(String),
     #[error("Custom: {0}")]
     Custom(String),
 }

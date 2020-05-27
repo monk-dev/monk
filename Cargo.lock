@@ -223,24 +223,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "colored",
- "config",
- "daemon",
- "failure",
- "reqwest",
- "serde 1.0.107",
- "structopt",
- "tantivy",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -389,27 +371,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
-name = "daemon"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "config",
- "futures",
- "rand 0.7.3",
- "serde 1.0.107",
- "serde_json",
- "structopt",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-futures",
- "tracing-subscriber",
- "url",
- "warp",
-]
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -417,6 +378,12 @@ checksum = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 dependencies = [
  "generic-array",
 ]
+
+[[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "downcast-rs"
@@ -454,6 +421,17 @@ dependencies = [
  "lazy_static",
  "log 0.4.8",
  "rand 0.6.5",
+]
+
+[[package]]
+name = "fail"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3be3c61c59fdc91f5dbc3ea31ee8623122ce80057058be560654c5d410d181a6"
+dependencies = [
+ "lazy_static",
+ "log 0.4.8",
+ "rand 0.7.3",
 ]
 
 [[package]]
@@ -939,6 +917,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "levenshtein_automata"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f44db4199cdb049b494a92d105acbfa43c25b3925e33803923ba9580b7bc9e1a"
+
+[[package]]
 name = "lexical-core"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1160,6 +1144,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "monk-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "colored",
+ "config",
+ "failure",
+ "monkd",
+ "reqwest",
+ "serde 1.0.107",
+ "structopt",
+ "sysinfo",
+ "tantivy 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "monkd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "config",
+ "futures",
+ "rand 0.7.3",
+ "serde 1.0.107",
+ "serde_json",
+ "structopt",
+ "tantivy 0.12.0 (git+https://github.com/tantivy-search/tantivy.git)",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-futures",
+ "tracing-subscriber",
+ "url",
+ "warp",
+]
+
+[[package]]
 name = "multipart"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1260,6 +1285,15 @@ dependencies = [
  "mio",
  "mio-extras",
  "walkdir",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "ntapi"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a31937dea023539c72ddae0e3571deadc1414b300483fa7aaec176168cfa9d2"
+dependencies = [
  "winapi 0.3.8",
 ]
 
@@ -2155,6 +2189,65 @@ dependencies = [
 ]
 
 [[package]]
+name = "sysinfo"
+version = "0.14.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa748057b52aac5fe6cf62677d536dcf4b639551496552aa2a8c43c501765ccc"
+dependencies = [
+ "cfg-if",
+ "doc-comment",
+ "libc",
+ "ntapi",
+ "once_cell",
+ "rayon",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "tantivy"
+version = "0.12.0"
+source = "git+https://github.com/tantivy-search/tantivy.git#baf015fc57d9794eae882785f3055fafa8d0cd82"
+dependencies = [
+ "atomicwrites",
+ "base64 0.12.1",
+ "bitpacking",
+ "byteorder",
+ "census",
+ "chrono",
+ "crc32fast",
+ "crossbeam",
+ "downcast-rs",
+ "fail 0.4.0",
+ "failure",
+ "fnv",
+ "fs2",
+ "futures",
+ "htmlescape",
+ "levenshtein_automata 0.2.0",
+ "log 0.4.8",
+ "memmap",
+ "murmurhash32",
+ "notify",
+ "num_cpus",
+ "once_cell",
+ "owned-read",
+ "owning_ref",
+ "rayon",
+ "regex",
+ "rust-stemmers",
+ "serde 1.0.107",
+ "serde_json",
+ "smallvec 1.4.0",
+ "snap",
+ "stable_deref_trait",
+ "tantivy-fst 0.3.0",
+ "tantivy-query-grammar 0.13.0",
+ "tempfile",
+ "uuid",
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "tantivy"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2169,14 +2262,14 @@ dependencies = [
  "crc32fast",
  "crossbeam",
  "downcast-rs",
- "fail",
+ "fail 0.3.0",
  "failure",
  "fnv",
  "fs2",
  "futures",
  "htmlescape",
  "itertools",
- "levenshtein_automata",
+ "levenshtein_automata 0.1.1",
  "log 0.4.8",
  "memmap",
  "murmurhash32",
@@ -2194,8 +2287,8 @@ dependencies = [
  "smallvec 1.4.0",
  "snap",
  "stable_deref_trait",
- "tantivy-fst",
- "tantivy-query-grammar",
+ "tantivy-fst 0.2.1",
+ "tantivy-query-grammar 0.12.0",
  "tempfile",
  "uuid",
  "winapi 0.3.8",
@@ -2208,7 +2301,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38878efb477cf2efb7d9112b12b230c27d32abdfec4bea5e66095733f2928610"
 dependencies = [
  "byteorder",
- "levenshtein_automata",
+ "levenshtein_automata 0.1.1",
+ "regex-syntax 0.4.2",
+ "utf8-ranges",
+]
+
+[[package]]
+name = "tantivy-fst"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb20cdc0d83e9184560bdde9cd60142dbb4af2e0f770e88fce45770495224205"
+dependencies = [
+ "byteorder",
  "regex-syntax 0.4.2",
  "utf8-ranges",
 ]
@@ -2218,6 +2322,14 @@ name = "tantivy-query-grammar"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "900f098da37d350b0e8f116791b9ee43e600704cb6b5cc83b7f826d1b119f21c"
+dependencies = [
+ "combine",
+]
+
+[[package]]
+name = "tantivy-query-grammar"
+version = "0.13.0"
+source = "git+https://github.com/tantivy-search/tantivy.git#baf015fc57d9794eae882785f3055fafa8d0cd82"
 dependencies = [
  "combine",
 ]

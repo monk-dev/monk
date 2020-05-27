@@ -208,3 +208,16 @@ fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
 
     Ok(())
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreSettings {
+    pub(crate) path: PathBuf,
+}
+
+impl Default for StoreSettings {
+    fn default() -> Self {
+        StoreSettings {
+            path: "./store.json".into(),
+        }
+    }
+}

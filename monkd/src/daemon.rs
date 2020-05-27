@@ -1,5 +1,6 @@
 use crate::error::Error;
-use crate::metadata::{FileStore, Meta, OfflineData, OfflineStore};
+use crate::index::Index;
+use crate::metadata::{FileStore, Meta /* OfflineData, OfflineStore */};
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
@@ -8,18 +9,21 @@ use tokio::sync::RwLock;
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
-    offline: Arc<RwLock<OfflineStore>>,
+    index: Arc<RwLock<Index>>,
+    // offline: Arc<RwLock<OfflineStore>>,
     settings: &'s Settings,
 }
 
 impl<'s> Daemon<'s> {
     pub fn new(settings: &'s Settings) -> Result<Self, Error> {
-        let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store())?));
-        let offline = Arc::new(RwLock::new(OfflineStore::read_file(&settings.offline())?));
+        let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
+        let index = Arc::new(RwLock::new(Index::new(&settings.index())?));
+        // let offline = Arc::new(RwLock::new(OfflineStore::read_file(&settings.offline())?));
 
         let store_clone = store.clone();
-        let delay =
-            std::time::Duration::from_millis(std::cmp::max(settings.timeout() / 3, 3) as u64);
+        let delay = std::time::Duration::from_millis(
+            std::cmp::max(settings.daemon().timeout / 3, 3) as u64,
+        );
 
         tokio::spawn(async move {
             tracing::info!("Auto Commit Delay: {:3.1} s.", delay.as_secs_f32());
@@ -34,7 +38,11 @@ impl<'s> Daemon<'s> {
             }
         });
 
-        Ok(Self { store, settings })
+        Ok(Self {
+            store,
+            index,
+            settings,
+        })
     }
 
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
@@ -95,7 +103,7 @@ impl<'s> Daemon<'s> {
         let store = self.store.write().await;
 
         if store.is_dirty() {
-            store.write_file(self.settings.store())?;
+            store.write_file(&self.settings.store().path)?;
         }
 
         Ok(())

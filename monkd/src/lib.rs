@@ -2,6 +2,7 @@
 
 pub mod daemon;
 pub mod error;
+pub mod index;
 pub mod metadata;
 pub mod server;
 pub mod settings;
@@ -26,10 +27,10 @@ pub async fn run(settings: Settings) -> Result<()> {
     let (sender, mut receiver) = mpsc::channel(100);
     let (shutdown, signal) = oneshot::channel::<()>();
 
-    let addr = SocketAddr::new(*settings.address(), settings.port());
+    let addr = SocketAddr::new(settings.daemon().address, settings.daemon().port);
 
     tokio::spawn(Server::spawn(addr, sender, signal));
-    let timeout_duration = Duration::from_millis(settings.timeout() as u64);
+    let timeout_duration = Duration::from_millis(settings.daemon().timeout as u64);
 
     let mut daemon = Daemon::new(&settings)?;
 

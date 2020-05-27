@@ -1,8 +1,8 @@
 use config::{Config, Environment, File};
 use structopt::StructOpt;
 
-use cli::settings::Settings;
-use cli::{args::Args, cli::Cli, error::Error};
+use monk_cli::{args::Args, cli::Cli, error::Error};
+use monkd::settings::Settings;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

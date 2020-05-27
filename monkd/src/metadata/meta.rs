@@ -1,5 +1,6 @@
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -7,23 +8,13 @@ pub struct Meta {
     pub(crate) id: String,
     pub(crate) name: Option<String>,
     pub(crate) url: Option<Url>,
-    // res: Option<PathBuf>,
+    pub(crate) comment: Option<String>,
     #[serde(with = "ts_milliseconds")]
     pub(crate) found: DateTime<Utc>,
     pub(crate) last_read: Option<DateTime<Utc>>,
 }
 
 impl Meta {
-    // pub fn new(name: impl Into<String>, url: Url, found: DateTime<Utc>) -> Self {
-    //     Self {
-    //         id,
-    //         name: name.into(),
-    //         url,
-    //         found,
-    //         last_read: None,
-    //     }
-    // }
-
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -34,6 +25,10 @@ impl Meta {
 
     pub fn url(&self) -> Option<&Url> {
         self.url.as_ref()
+    }
+
+    pub fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
     }
 
     pub fn found(&self) -> &DateTime<Utc> {
@@ -49,6 +44,7 @@ pub struct MetaBuilder {
     id: Option<String>,
     name: Option<String>,
     url: Option<Url>,
+    comment: Option<String>,
     found: Option<DateTime<Utc>>,
     last_read: Option<DateTime<Utc>>,
 }
@@ -59,6 +55,7 @@ impl MetaBuilder {
             name: None,
             url: None,
             id: None,
+            comment: None,
             found: None,
             last_read: None,
         }
@@ -99,6 +96,13 @@ impl MetaBuilder {
         }
     }
 
+    pub fn comment(self, comment: impl Into<String>) -> Self {
+        Self {
+            comment: Some(comment.into()),
+            ..self
+        }
+    }
+
     pub fn build(self) -> Meta {
         let found = if let Some(found) = self.found {
             found
@@ -116,8 +120,34 @@ impl MetaBuilder {
             id,
             name: self.name,
             url: self.url,
+            comment: self.comment,
             found,
             last_read: self.last_read,
         }
+    }
+}
+
+impl fmt::Display for Meta {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(name) = self.name() {
+            write!(f, "{}:", name)?;
+        } else {
+            write!(f, "n/a:")?;
+        }
+
+        if let Some(url) = self.url() {
+            write!(f, " {}", url.to_string())?;
+        }
+
+        write!(f, " [{}]", self.id())?;
+
+        let found = self.found.format("%a %d, %Y").to_string();
+        write!(f, " @ {}", found)?;
+
+        if let Some(comment) = self.comment() {
+            write!(f, "\n\t{}", comment)?;
+        }
+
+        Ok(())
     }
 }

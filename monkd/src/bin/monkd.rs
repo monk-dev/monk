@@ -4,7 +4,7 @@ use anyhow::Result;
 use config::{Config, Environment, File};
 use structopt::StructOpt;
 
-use daemon::settings::Settings;
+use monkd::settings::Settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
@@ -15,7 +15,6 @@ pub struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-
     let args = Args::from_args();
 
     let mut config = Config::default();
@@ -26,7 +25,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("{:?}", settings);
 
-    daemon::run(settings).await?;
+    monkd::run(settings).await?;
 
     Ok(())
 }

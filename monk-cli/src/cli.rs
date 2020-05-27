@@ -2,9 +2,9 @@ use std::net::SocketAddr;
 
 use crate::args::{Args, Subcommand};
 use crate::error::Error;
-use crate::settings::Settings;
 
-use daemon::server::{request::Request, response::Response};
+use monkd::server::{request::Request, response::Response};
+use monkd::settings::Settings;
 use url::Url;
 
 pub struct Cli;
@@ -27,7 +27,7 @@ impl Cli {
             Subcommand::ForceShutdown => Request::ForceShutdown,
         };
 
-        let socket = SocketAddr::new(*settings.address(), settings.port());
+        let socket = SocketAddr::new(settings.daemon().address, settings.daemon().port);
         let socket_url = format!("http://{}", socket.to_string());
         let url = reqwest::Url::parse(&socket_url)?;
 
@@ -41,11 +41,11 @@ impl Cli {
 
         match response {
             Response::Item(meta) => {
-                println!("{:?}", meta);
+                println!("{}", meta);
             }
             Response::List(items) => {
-                for meta in items {
-                    println!("{:?}", meta);
+                for (i, meta) in items.iter().enumerate() {
+                    println!("[{}]: {}", i, meta);
                 }
             }
             Response::NewId(id) => {
@@ -57,14 +57,37 @@ impl Cli {
             Response::Unhandled => {
                 println!("Unhandled Request");
             }
-            Response::Ok => {
-                println!("Request was successful");
-            }
+            Response::Ok => {}
             Response::Error(e) => {
-                println!("Server Error processing request:\n{}", e);
+                println!("Server Error processing request: {}", e);
+                std::process::exit(1);
             }
         }
 
         Ok(())
     }
+}
+
+pub fn check_or_spawn() -> Result<(), std::io::Error> {
+    use std::process::{Command, Stdio};
+    use sysinfo::{ProcessExt, SystemExt};
+
+    let mut system = sysinfo::System::new_all();
+    system.refresh_all();
+
+    if let None = system
+        .get_processes()
+        .iter()
+        .find(|(_pid, proc)| proc.name() == "monkd")
+    {
+        println!("Spawning the daemon");
+
+        let _monkd = Command::new("monkd")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null())
+            .spawn()?;
+    }
+
+    Ok(())
 }
