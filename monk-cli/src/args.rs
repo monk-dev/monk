@@ -14,12 +14,13 @@ pub struct Args {
 pub enum Subcommand {
     /// Add an item to the database
     Add {
-        /// The name of the item
-        // #[structopt()]
-        name: String,
+        /// Optional name of an item
+        name: Option<String>,
         /// The uri of the item
         #[structopt(short, long)]
         url: Option<String>,
+        #[structopt(short, long)]
+        comment: Option<String>,
         // /// The body of the item
         // #[structopt(short, long)]
         // body: Option<String>,
@@ -32,15 +33,16 @@ pub enum Subcommand {
     },
     /// List all items in the database
     List {
+        /// How many items to return. Defaults to all
         // #[structopt(short, long)]
         count: Option<usize>,
     },
-    Get {
-        id: String,
-    },
-    Delete {
-        id: String,
-    },
+    /// Get a single item from the database
+    Get { id: String },
+    /// Delete an item from the database
+    Delete { id: String },
+    /// Shutdown the daemon with no cleanup
     ForceShutdown,
+    /// Cleanly shutdown the daemon
     Stop,
 }

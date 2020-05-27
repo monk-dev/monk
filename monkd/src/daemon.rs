@@ -47,7 +47,7 @@ impl<'s> Daemon<'s> {
 
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
         match req {
-            Request::Add { name, url } => {
+            Request::Add { name, url, comment } => {
                 tracing::info!("[add] {:?} {:?}", name, url);
                 let mut builder = Meta::builder();
 
@@ -57,6 +57,10 @@ impl<'s> Daemon<'s> {
 
                 if let Some(url) = url {
                     builder = builder.url(url);
+                }
+
+                if let Some(comment) = comment {
+                    builder = builder.comment(comment);
                 }
 
                 let meta = builder.build();
@@ -71,8 +75,8 @@ impl<'s> Daemon<'s> {
                 tracing::info!("[delete] {:?}", id);
 
                 match self.store.write().await.delete(&id) {
-                    Some(e) => Ok(Response::Item(e)),
-                    None => Ok(Response::Error(format!("Item with id: {}, not found", id))),
+                    Ok(e) => Ok(Response::Item(e)),
+                    Err(e) => Ok(Response::Error(e.to_string())),
                 }
             }
             Request::List { count } => {

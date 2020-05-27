@@ -99,16 +99,28 @@ impl FileStore {
         }
     }
 
-    pub fn delete(&mut self, id: impl AsRef<str>) -> Option<Meta> {
-        let (idx, _) = self
+    pub fn delete(&mut self, id: impl AsRef<str>) -> Result<Meta, Error> {
+        
+        let ids: Vec<usize> = self
             .metadata
             .iter()
             .enumerate()
-            .find(|(_, m)| m.id() == id.as_ref())?;
+            .filter(|(_, m)| m.id().starts_with(id.as_ref())).map(|(i, _)| i).collect();
+        
+        tracing::info!("Ids: {:?}", ids);
 
+        if ids.len() > 1 {
+            return Err(Error::TooManyIds(id.as_ref().into()));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
+        }
+        
+        tracing::info!("Deleting: `{}`", id.as_ref());
         self.dirty = true;
 
-        Some(self.metadata.swap_remove(idx))
+        let removed = self.metadata.swap_remove(ids[0]);
+
+        Ok(removed)
     }
 
     pub fn data(&self) -> &[Meta] {

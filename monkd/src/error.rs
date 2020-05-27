@@ -22,8 +22,10 @@ pub enum Error {
     JsonError(#[from] serde_json::Error),
     #[error("Attempted to update with unequal IDs")]
     UnequalIds,
-    #[error("ID Not found: {0}")]
+    #[error("ID Not found: `{0}`")]
     IdNotFound(String),
+    #[error("Too many ids for: `{0}`")]
+    TooManyIds(String),
     // #[err("")]
     #[error("Tantivy Error: {0}")]
     Tantivy(String),

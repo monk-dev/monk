@@ -15,12 +15,13 @@ impl Cli {
         check_or_spawn().await?;
         
         let request = match args.subcommand {
-            Subcommand::Add { name, url } => {
+            Subcommand::Add { name, url, comment } => {
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
 
                 Request::Add {
-                    name: Some(name.clone()),
+                    name,
                     url,
+                    comment,
                 }
             }
             Subcommand::List { count } => Request::List { count },
@@ -44,13 +45,16 @@ impl Cli {
 
         match response {
             Response::Item(meta) => {
-                println!("{}", meta);
+                print_tabled(vec![meta]);
             }
-            Response::List(items) => {
-                print_tabled(items);
-                // for (i, meta) in items.iter().enumerate() {
-                //     println!("[{}]: {}", i, meta);
-                // }
+            Response::List(mut items) => {
+                items.sort_by_key(|i| *i.found());
+                
+                if items.is_empty() {
+                    println!("no items returned");
+                } else {
+                    print_tabled(items);
+                }
             }
             Response::NewId(id) => {
                 println!("Created ID: {}", id);
@@ -77,40 +81,33 @@ pub fn print_tabled(metas: Vec<Meta>) {
 
     let mut table = Table::new();
     table.max_column_width = 40;
-    table.style = TableStyle::extended();
+    table.style = TableStyle::rounded();
+
+    let mut row = Vec::new();
+    row.push(TableCell::new_with_alignment("name", 1, Alignment::Center));
+    row.push(TableCell::new_with_alignment("url", 1, Alignment::Center));
+    row.push(TableCell::new_with_alignment("comment", 1, Alignment::Center));
+    row.push(TableCell::new_with_alignment("date", 1, Alignment::Center));
+    row.push(TableCell::new_with_alignment("id", 1, Alignment::Center));
+    table.add_row(Row::new(row));
 
     for meta in metas {
         let mut row = Vec::new();
-
         row.push(TableCell::new_with_alignment(meta.name().unwrap_or(""), 1, Alignment::Left));
         row.push(TableCell::new_with_alignment(meta.url().map(|u| u.to_string()).unwrap_or("".into()), 1, Alignment::Left));
-        row.push(TableCell::new_with_alignment(meta.comment().unwrap_or("n/a".into()), 1, Alignment::Left));
+        
+        if let Some(comment) = meta.comment() {
+            row.push(TableCell::new_with_alignment(comment, 1, Alignment::Left));
+        } else {
+            row.push(TableCell::new_with_alignment("n/a", 1, Alignment::Center));
+        }
+        
         row.push(TableCell::new_with_alignment(meta.found().format("%b %d, %Y").to_string(), 1, Alignment::Right));
         row.push(TableCell::new_with_alignment(meta.id(), 1, Alignment::Right));
-
         table.add_row(Row::new(row));
-
-        // write!(f, "[{}]", meta.id())?;
-
-        // if let Some(name) = meta.name() {
-        //     write!(f, " {}:", name)?;
-        // } else {
-        //     write!(f, "n/a:")?;
-        // }
-
-        // if let Some(url) = meta.url() {
-        //     write!(f, " {}", url.to_string())?;
-        // }
-
-        // let found = meta.found.format("%a %d, %Y").to_string();
-        // write!(f, " @ {}", found)?;
-
-        // if let Some(comment) = meta.comment() {
-        //     write!(f, "\n\t{}", comment)?;
-        // }
     }
 
-    println!("{}", table.render());
+    print!("{}", table.render());
 }
 
 pub async fn check_or_spawn() -> Result<(), std::io::Error> {
@@ -125,7 +122,7 @@ pub async fn check_or_spawn() -> Result<(), std::io::Error> {
         .iter()
         .find(|(_pid, proc)| proc.name() == "monkd")
     {
-        println!("Spawning the daemon");
+        // println!("Spawning the daemon");
 
         let _monkd = Command::new("./target/debug/monkd")
             .stdout(Stdio::null())

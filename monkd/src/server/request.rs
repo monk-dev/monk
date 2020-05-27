@@ -6,6 +6,7 @@ pub enum Request {
     Add {
         name: Option<String>,
         url: Option<Url>,
+        comment: Option<String>,
     },
     List {
         count: Option<usize>,
