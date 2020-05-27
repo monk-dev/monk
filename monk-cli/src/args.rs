@@ -4,7 +4,7 @@ use structopt::StructOpt;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
-    #[structopt(default_value = "./cli/cli.yaml")]
+    #[structopt(default_value = "./monkd.yaml")]
     pub config: PathBuf,
     #[structopt(subcommand)]
     pub subcommand: Subcommand,

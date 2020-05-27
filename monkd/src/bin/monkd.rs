@@ -8,20 +8,23 @@ use monkd::settings::Settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
-    #[structopt(short, long, default_value = "./daemon/daemon.yaml")]
+    #[structopt(short, long, default_value = "./monkd.yaml")]
     config: String,
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+async fn main() -> Result<()> {    
     let args = Args::from_args();
-
+    
     let mut config = Config::default();
     config.merge(File::with_name(&args.config))?;
-    config.merge(Environment::with_prefix("daemon"))?;
-
+    config.merge(Environment::with_prefix("monk"))?;
+    
     let settings: Settings = config.try_into()?;
+
+    let appender = tracing_appender::rolling::daily(settings.log_dir(), "monkd");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(appender);
+    tracing_subscriber::fmt().with_writer(non_blocking).init();
 
     tracing::info!("{:?}", settings);
 

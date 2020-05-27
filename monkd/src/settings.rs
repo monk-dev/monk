@@ -5,14 +5,19 @@ use std::path::{Path, PathBuf};
 use crate::index::settings::IndexSettings;
 use crate::metadata::file_store::StoreSettings;
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
+    log_dir: PathBuf,
     daemon: DaemonSettings,
     store: StoreSettings,
     index: IndexSettings,
 }
 
 impl Settings {
+    pub fn log_dir(&self) -> &Path {
+        &self.log_dir
+    }
+
     pub fn daemon(&self) -> &DaemonSettings {
         &self.daemon
     }
@@ -21,6 +26,15 @@ impl Settings {
     }
     pub fn index(&self) -> &IndexSettings {
         &self.index
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            log_dir: "/var/log/monk".into(),
+            ..Default::default()
+        }
     }
 }
 

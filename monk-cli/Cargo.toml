@@ -24,3 +24,4 @@ reqwest = { version = "*", features = ["json"] }
 tokio = "*"
 url = "*"
 sysinfo = "*"
+term-table = "*"

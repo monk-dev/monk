@@ -5,12 +5,15 @@ use crate::error::Error;
 
 use monkd::server::{request::Request, response::Response};
 use monkd::settings::Settings;
+use monkd::metadata::Meta;
 use url::Url;
 
 pub struct Cli;
 
 impl Cli {
     pub async fn run(settings: Settings, args: Args) -> Result<(), Error> {
+        check_or_spawn().await?;
+        
         let request = match args.subcommand {
             Subcommand::Add { name, url } => {
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
@@ -44,9 +47,10 @@ impl Cli {
                 println!("{}", meta);
             }
             Response::List(items) => {
-                for (i, meta) in items.iter().enumerate() {
-                    println!("[{}]: {}", i, meta);
-                }
+                print_tabled(items);
+                // for (i, meta) in items.iter().enumerate() {
+                //     println!("[{}]: {}", i, meta);
+                // }
             }
             Response::NewId(id) => {
                 println!("Created ID: {}", id);
@@ -68,7 +72,48 @@ impl Cli {
     }
 }
 
-pub fn check_or_spawn() -> Result<(), std::io::Error> {
+pub fn print_tabled(metas: Vec<Meta>) {
+    use term_table::{Table, TableStyle, row::Row, table_cell::{TableCell, Alignment}};
+
+    let mut table = Table::new();
+    table.max_column_width = 40;
+    table.style = TableStyle::extended();
+
+    for meta in metas {
+        let mut row = Vec::new();
+
+        row.push(TableCell::new_with_alignment(meta.name().unwrap_or(""), 1, Alignment::Left));
+        row.push(TableCell::new_with_alignment(meta.url().map(|u| u.to_string()).unwrap_or("".into()), 1, Alignment::Left));
+        row.push(TableCell::new_with_alignment(meta.comment().unwrap_or("n/a".into()), 1, Alignment::Left));
+        row.push(TableCell::new_with_alignment(meta.found().format("%b %d, %Y").to_string(), 1, Alignment::Right));
+        row.push(TableCell::new_with_alignment(meta.id(), 1, Alignment::Right));
+
+        table.add_row(Row::new(row));
+
+        // write!(f, "[{}]", meta.id())?;
+
+        // if let Some(name) = meta.name() {
+        //     write!(f, " {}:", name)?;
+        // } else {
+        //     write!(f, "n/a:")?;
+        // }
+
+        // if let Some(url) = meta.url() {
+        //     write!(f, " {}", url.to_string())?;
+        // }
+
+        // let found = meta.found.format("%a %d, %Y").to_string();
+        // write!(f, " @ {}", found)?;
+
+        // if let Some(comment) = meta.comment() {
+        //     write!(f, "\n\t{}", comment)?;
+        // }
+    }
+
+    println!("{}", table.render());
+}
+
+pub async fn check_or_spawn() -> Result<(), std::io::Error> {
     use std::process::{Command, Stdio};
     use sysinfo::{ProcessExt, SystemExt};
 
@@ -82,11 +127,13 @@ pub fn check_or_spawn() -> Result<(), std::io::Error> {
     {
         println!("Spawning the daemon");
 
-        let _monkd = Command::new("monkd")
+        let _monkd = Command::new("./target/debug/monkd")
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .stdin(Stdio::null())
             .spawn()?;
+
+        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
     }
 
     Ok(())

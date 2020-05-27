@@ -6,6 +6,8 @@ use monkd::settings::Settings;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    println!("{}", std::env::current_dir().unwrap().display());
+
     let args = Args::from_args();
 
     let mut config = Config::default();

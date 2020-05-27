@@ -15,6 +15,8 @@ pub enum Error {
     UrlParseError(#[from] url::ParseError),
     #[error("Reqwest Error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    #[error("Io Error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl From<TantivyError> for Error {

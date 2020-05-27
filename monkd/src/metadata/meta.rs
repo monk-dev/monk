@@ -129,8 +129,10 @@ impl MetaBuilder {
 
 impl fmt::Display for Meta {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}]", self.id())?;
+
         if let Some(name) = self.name() {
-            write!(f, "{}:", name)?;
+            write!(f, " {}:", name)?;
         } else {
             write!(f, "n/a:")?;
         }
@@ -138,8 +140,6 @@ impl fmt::Display for Meta {
         if let Some(url) = self.url() {
             write!(f, " {}", url.to_string())?;
         }
-
-        write!(f, " [{}]", self.id())?;
 
         let found = self.found.format("%a %d, %Y").to_string();
         write!(f, " @ {}", found)?;
