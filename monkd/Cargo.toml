@@ -29,3 +29,5 @@ config = "*"
 structopt = "*"
 warp = "*"
 tantivy = { git = "https://github.com/tantivy-search/tantivy.git" }
+monolith = { path = "../monolith" }
+reqwest = "*"

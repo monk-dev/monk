@@ -73,7 +73,11 @@ impl FileStore {
     }
 
     pub fn get(&self, id: impl AsRef<str>) -> Option<&Meta> {
-        self.metadata.iter().find(|m| m.id() == id.as_ref())
+        // self.metadata.iter().find(|m| m.id() == id.as_ref())
+        self.metadata
+            .binary_search_by_key(&id.as_ref(), |m| m.id())
+            .ok()
+            .map(|i| &self.metadata[i])
     }
 
     pub fn get_mut(&mut self, id: impl AsRef<str>) -> Option<&mut Meta> {
@@ -100,13 +104,14 @@ impl FileStore {
     }
 
     pub fn delete(&mut self, id: impl AsRef<str>) -> Result<Meta, Error> {
-        
         let ids: Vec<usize> = self
             .metadata
             .iter()
             .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref())).map(|(i, _)| i).collect();
-        
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
+
         tracing::info!("Ids: {:?}", ids);
 
         if ids.len() > 1 {
@@ -114,7 +119,7 @@ impl FileStore {
         } else if ids.is_empty() {
             return Err(Error::IdNotFound(id.as_ref().into()));
         }
-        
+
         tracing::info!("Deleting: `{}`", id.as_ref());
         self.dirty = true;
 

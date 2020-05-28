@@ -1,24 +1,101 @@
-use crate::error::Error;
-
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
-use url::Url;
-
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use tokio::sync::RwLock;
+use url::Url;
+
+use crate::error::Error;
+use crate::metadata::monolith::download_meta;
+use crate::metadata::Meta;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineStore {
     data: Vec<OfflineData>,
-    file: PathBuf,
+    pub file: PathBuf,
     dirty: bool,
 }
 
 impl OfflineStore {
     pub fn file(&self) -> &Path {
         &self.file
+    }
+
+    pub async fn download_meta(meta: Meta, store: Arc<RwLock<OfflineStore>>) -> Result<(), Error> {
+        let root = store.read().await.file.clone();
+
+        let id = meta.id().to_string();
+        let mut data = OfflineData {
+            id: meta.id().to_string(),
+            url: meta.url().cloned(),
+            file: None,
+            status: Status::Downloading,
+        };
+
+        {
+            store.write().await.push(data.clone())?;
+        }
+
+        match tokio::task::spawn_blocking(move || download_meta(&meta, root)).await? {
+            Ok(path) => {
+                data.status = Status::Ready;
+                data.file = Some(path);
+            }
+            Err(e) => {
+                data.status = Status::Error(e.to_string());
+            }
+        }
+
+        {
+            store.write().await.update(id, data)?;
+        }
+        Ok(())
+    }
+
+    fn push(&mut self, data: OfflineData) -> Result<(), Error> {
+        self.dirty = true;
+
+        match self.data.binary_search_by_key(&data.id(), |m| m.id()) {
+            Ok(_) => Err(Error::AlreadyExists(data.id().to_string())),
+            Err(index) => {
+                self.data.insert(index, data);
+                self.dirty = true;
+
+                Ok(())
+            }
+        }
+    }
+
+    pub fn update(&mut self, id: impl AsRef<str>, data: OfflineData) -> Result<(), Error> {
+        if id.as_ref() != data.id {
+            return Err(Error::UnequalIds);
+        }
+
+        if let Some(d) = self.get_mut(&id) {
+            *d = data;
+            Ok(())
+        } else {
+            Err(Error::IdNotFound(id.as_ref().to_string()))
+        }
+    }
+
+    pub fn get(&self, id: impl AsRef<str>) -> Option<&OfflineData> {
+        // self.OfflineDatadata.iter().find(|m| m.id() == id.as_ref())
+        self.data
+            .binary_search_by_key(&id.as_ref(), |m| m.id())
+            .ok()
+            .map(|i| &self.data[i])
+    }
+
+    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Option<&mut OfflineData> {
+        let e = self.data.iter_mut().find(|m| m.id() == id.as_ref());
+
+        if e.is_some() {
+            self.dirty = true;
+        }
+
+        e
     }
 
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
@@ -28,7 +105,7 @@ impl OfflineStore {
         let reader = BufReader::new(file);
 
         let mut store: OfflineStore = serde_json::from_reader(reader)?;
-        store.file = path.as_ref().into();
+        store.file = path.as_ref().parent().unwrap().into();
         store.data.sort_by(|l, r| l.id().cmp(r.id()));
 
         Ok(store)
@@ -65,23 +142,21 @@ impl OfflineStore {
         loop {
             tokio::time::delay_for(delay).await;
 
-            handle
+            let _ = handle
                 .write()
                 .await
                 .commit()
                 .map_err(|e| tracing::error!("OfflineStore: {}", e));
         }
-
-        Ok(())
     }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineData {
-    id: String,
-    url: Option<Url>,
-    file: Option<PathBuf>,
-    dirty: bool,
+    pub id: String,
+    pub url: Option<Url>,
+    pub file: Option<PathBuf>,
+    pub status: Status,
 }
 
 impl OfflineData {
@@ -97,8 +172,21 @@ impl OfflineData {
     //     self.indexed
     // }
 
-    pub fn is_dirty(&self) -> bool {
-        self.dirty
+    // pub fn is_dirty(&self) -> bool {
+    //     self.dirty
+    // }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Status {
+    Ready,
+    Downloading,
+    Error(String),
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Status::Downloading
     }
 }
 
@@ -119,4 +207,17 @@ fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
     file.sync_all()?;
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OfflineSettings {
+    pub(crate) path: PathBuf,
+}
+
+impl Default for OfflineSettings {
+    fn default() -> Self {
+        OfflineSettings {
+            path: "./offline".into(),
+        }
+    }
 }

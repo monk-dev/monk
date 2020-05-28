@@ -49,31 +49,3 @@ pub async fn handle(
         Err(_) => json(&Response::Error(format!("Error receiving oneshot message"))),
     })
 }
-
-// #[tracing::instrument]
-// pub async fn list(
-//     mut sender: Sender<(Request, oneshot::Sender<Response>)>,
-//     req: Request,
-// ) -> Result<impl warp::Reply, warp::Rejection> {
-//     let (send, resp) = oneshot::channel();
-//     sender.send((req, send)).await.map_err(|_| ()).unwrap();
-
-//     Ok(match resp.await {
-//         Ok(r) => json(&r),
-//         Err(_) => json(&Response::Error(format!("Error receiving oneshot message"))),
-//     })
-// }
-
-// #[tracing::instrument]
-// pub async fn stop(
-//     mut sender: Sender<(Request, oneshot::Sender<Response>)>,
-//     req: Request,
-// ) -> Result<impl warp::Reply, warp::Rejection> {
-//     let (send, resp) = oneshot::channel();
-//     sender.send((req, send)).await.map_err(|_| ()).unwrap();
-
-//     Ok(match resp.await {
-//         Ok(r) => json(&r),
-//         Err(_) => json(&Response::Error(format!("Error receiving oneshot message"))),
-//     })
-// }

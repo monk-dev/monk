@@ -1,6 +1,9 @@
 use crate::error::Error;
 use crate::index::Index;
-use crate::metadata::{FileStore, Meta /* OfflineData, OfflineStore */};
+use crate::metadata::{
+    offline_store::{OfflineData, OfflineStore, Status},
+    FileStore, Meta,
+};
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
@@ -10,7 +13,7 @@ use tokio::sync::RwLock;
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
     index: Arc<RwLock<Index>>,
-    // offline: Arc<RwLock<OfflineStore>>,
+    offline: Arc<RwLock<OfflineStore>>,
     settings: &'s Settings,
 }
 
@@ -18,7 +21,9 @@ impl<'s> Daemon<'s> {
     pub fn new(settings: &'s Settings) -> Result<Self, Error> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
         let index = Arc::new(RwLock::new(Index::new(&settings.index())?));
-        // let offline = Arc::new(RwLock::new(OfflineStore::read_file(&settings.offline())?));
+        let offline = Arc::new(RwLock::new(OfflineStore::read_file(
+            &settings.offline().path.join("offline.json"),
+        )?));
 
         let store_clone = store.clone();
         let delay = std::time::Duration::from_millis(
@@ -41,11 +46,15 @@ impl<'s> Daemon<'s> {
         Ok(Self {
             store,
             index,
+            offline,
             settings,
         })
     }
 
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
+        // let offline = Arc::clone(&self.offline);
+        // let store = Arc::clone(&self.store);
+
         match req {
             Request::Add { name, url, comment } => {
                 tracing::info!("[add] {:?} {:?}", name, url);
@@ -95,6 +104,39 @@ impl<'s> Daemon<'s> {
                 Some(m) => Ok(Response::Item(m.clone())),
                 None => Ok(Response::NotFound(id)),
             },
+            Request::Download { id } => {
+                // We only want to download a single file:
+
+                if let Some(meta) = self.store.read().await.get(&id).cloned() {
+                    if let Some(data) = self.offline.read().await.get(meta.id()) {
+                        if data.status == Status::Ready {
+                            return Ok(Response::Status(data.id().to_string(), Status::Ready));
+                        }
+                    }
+
+                    let offline = Arc::clone(&self.offline);
+                    tokio::spawn(async move {
+                        if let Err(e) = OfflineStore::download_meta(meta, offline).await {
+                            tracing::error!("{}", e);
+                        }
+                    });
+
+                    Ok(Response::Ok)
+                } else {
+                    Ok(Response::Error(Error::IdNotFound(id).to_string()))
+                }
+            }
+            Request::Open { id } => {
+                if let Some(data) = self.offline.read().await.get(&id) {
+                    if let Some(path) = &data.file {
+                        Ok(Response::Open(path.clone()))
+                    } else {
+                        Ok(Response::OpenStatus(id, data.status.clone()))
+                    }
+                } else {
+                    Ok(Response::Error(Error::IdNotFound(id).to_string()))
+                }
+            }
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
 

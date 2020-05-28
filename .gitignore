@@ -1,3 +1,4 @@
 **/target/*
 tantivy/
-log
+log/
+offline/

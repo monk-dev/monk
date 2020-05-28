@@ -17,6 +17,12 @@ pub enum Request {
     Get {
         id: String,
     },
+    Download {
+        id: String,
+    },
+    Open {
+        id: String,
+    },
     ForceShutdown,
     Stop,
 }

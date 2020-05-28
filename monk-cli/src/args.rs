@@ -38,9 +38,19 @@ pub enum Subcommand {
         count: Option<usize>,
     },
     /// Get a single item from the database
-    Get { id: String },
+    Get {
+        id: String,
+    },
     /// Delete an item from the database
-    Delete { id: String },
+    Delete {
+        id: String,
+    },
+    Download {
+        id: String,
+    },
+    Open {
+        id: String,
+    },
     /// Shutdown the daemon with no cleanup
     ForceShutdown,
     /// Cleanly shutdown the daemon

@@ -3,13 +3,14 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
 use crate::index::settings::IndexSettings;
-use crate::metadata::file_store::StoreSettings;
+use crate::metadata::{file_store::StoreSettings, offline_store::OfflineSettings};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     log_dir: PathBuf,
     daemon: DaemonSettings,
     store: StoreSettings,
+    offline: OfflineSettings,
     index: IndexSettings,
 }
 
@@ -24,6 +25,10 @@ impl Settings {
     pub fn store(&self) -> &StoreSettings {
         &self.store
     }
+    pub fn offline(&self) -> &OfflineSettings {
+        &self.offline
+    }
+
     pub fn index(&self) -> &IndexSettings {
         &self.index
     }

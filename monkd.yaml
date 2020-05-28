@@ -5,5 +5,7 @@ daemon:
   timeout: 50000 # 50 seconds
 store:
   path: ./store.json
+offline:
+  path: ./offline
 index:
   path: ./tantivy

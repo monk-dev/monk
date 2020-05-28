@@ -26,9 +26,16 @@ pub enum Error {
     IdNotFound(String),
     #[error("Too many ids for: `{0}`")]
     TooManyIds(String),
-    // #[err("")]
     #[error("Tantivy Error: {0}")]
     Tantivy(String),
+    #[error("No url for: `{0}`")]
+    NoUrl(String),
+    #[error("reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("error reading utf-8 data: {0}")]
+    Utf8Conversion(#[from] std::string::FromUtf8Error),
+    #[error("Tokio join error: {0}")]
+    JoinHandle(#[from] tokio::task::JoinError),
     #[error("Custom: {0}")]
     Custom(String),
 }
