@@ -50,6 +50,7 @@ impl OfflineStore {
         {
             store.write().await.update(id, data)?;
         }
+
         Ok(())
     }
 
@@ -72,30 +73,54 @@ impl OfflineStore {
             return Err(Error::UnequalIds);
         }
 
-        if let Some(d) = self.get_mut(&id) {
-            *d = data;
-            Ok(())
-        } else {
-            Err(Error::IdNotFound(id.as_ref().to_string()))
-        }
+        let d = self.get_mut(&id)?;
+        *d = data;
+
+        self.dirty = true;
+
+        Ok(())
     }
 
-    pub fn get(&self, id: impl AsRef<str>) -> Option<&OfflineData> {
-        // self.OfflineDatadata.iter().find(|m| m.id() == id.as_ref())
-        self.data
-            .binary_search_by_key(&id.as_ref(), |m| m.id())
-            .ok()
-            .map(|i| &self.data[i])
-    }
+    pub fn get(&self, id: impl AsRef<str>) -> Result<&OfflineData, Error> {
+        let ids: Vec<usize> = self
+            .data
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
 
-    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Option<&mut OfflineData> {
-        let e = self.data.iter_mut().find(|m| m.id() == id.as_ref());
+        tracing::info!("Ids: {:?}", ids);
 
-        if e.is_some() {
-            self.dirty = true;
+        if ids.len() > 1 {
+            return Err(Error::TooManyIds(id.as_ref().into(), ids));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
         }
 
-        e
+        Ok(&self.data[ids[0]])
+    }
+
+    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Result<&mut OfflineData, Error> {
+        let ids: Vec<usize> = self
+            .data
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
+
+        tracing::info!("Ids: {:?}", ids);
+
+        if ids.len() > 1 {
+            return Err(Error::TooManyIds(id.as_ref().into(), ids));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
+        }
+
+        self.dirty = true;
+
+        Ok(&mut self.data[ids[0]])
     }
 
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {

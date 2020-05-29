@@ -15,8 +15,11 @@ use tracing::{info, instrument};
 use super::Meta;
 use crate::error::Error;
 
+pub const CURRENT_FILE_STORE_VERSION: &'static str = "0.0.0";
+
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct FileStore {
+    version: String,
     metadata: Vec<Meta>,
     #[serde(skip)]
     file: PathBuf,
@@ -27,6 +30,7 @@ pub struct FileStore {
 impl FileStore {
     pub fn empty() -> Self {
         Self {
+            version: CURRENT_FILE_STORE_VERSION.to_string(),
             metadata: Vec::new(),
             file: PathBuf::new(),
             dirty: false,
@@ -72,22 +76,58 @@ impl FileStore {
         Ok(())
     }
 
-    pub fn get(&self, id: impl AsRef<str>) -> Option<&Meta> {
-        // self.metadata.iter().find(|m| m.id() == id.as_ref())
-        self.metadata
-            .binary_search_by_key(&id.as_ref(), |m| m.id())
-            .ok()
-            .map(|i| &self.metadata[i])
-    }
+    pub fn get(&self, id: impl AsRef<str>) -> Result<&Meta, Error> {
+        let ids: Vec<usize> = self
+            .metadata
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
 
-    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Option<&mut Meta> {
-        let e = self.metadata.iter_mut().find(|m| m.id() == id.as_ref());
+        tracing::info!("Ids: {:?}", ids);
 
-        if e.is_some() {
-            self.dirty = true;
+        if ids.len() > 1 {
+            return Err(Error::TooManyMetas(
+                id.as_ref().into(),
+                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
+            ));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
         }
 
-        e
+        // self.metadata.iter().find(|m| m.id() == id.as_ref())
+        Ok(&self.metadata[ids[0]])
+    }
+
+    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Result<&mut Meta, Error> {
+        let ids: Vec<usize> = self
+            .metadata
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
+
+        tracing::info!("Ids: {:?}", ids);
+
+        if ids.len() > 1 {
+            return Err(Error::TooManyMetas(
+                id.as_ref().into(),
+                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
+            ));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
+        }
+
+        self.dirty = true;
+
+        // self.metadata.iter().find(|m| m.id() == id.as_ref())
+        Ok(&mut self.metadata[ids[0]])
+    }
+
+    pub fn index(&self, idx: usize) -> &Meta {
+        &self.metadata[idx]
     }
 
     pub fn update(&mut self, id: impl AsRef<str>, data: Meta) -> Result<(), Error> {
@@ -95,12 +135,12 @@ impl FileStore {
             return Err(Error::UnequalIds);
         }
 
-        if let Some(meta) = self.get_mut(&id) {
-            *meta = data;
-            Ok(())
-        } else {
-            Err(Error::IdNotFound(id.as_ref().to_string()))
-        }
+        let meta = self.get_mut(&id)?;
+        *meta = data;
+
+        self.dirty = true;
+
+        Ok(())
     }
 
     pub fn delete(&mut self, id: impl AsRef<str>) -> Result<Meta, Error> {
@@ -115,7 +155,7 @@ impl FileStore {
         tracing::info!("Ids: {:?}", ids);
 
         if ids.len() > 1 {
-            return Err(Error::TooManyIds(id.as_ref().into()));
+            return Err(Error::TooManyIds(id.as_ref().into(), ids));
         } else if ids.is_empty() {
             return Err(Error::IdNotFound(id.as_ref().into()));
         }
@@ -158,7 +198,7 @@ impl FileStore {
         loop {
             tokio::time::delay_for(delay).await;
 
-            handle
+            let _ = handle
                 .write()
                 .await
                 .commit()

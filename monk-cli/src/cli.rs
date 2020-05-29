@@ -1,4 +1,10 @@
 use std::net::SocketAddr;
+use term_table::{
+    row::Row,
+    table_cell::{Alignment, TableCell},
+    Table, TableStyle,
+};
+use url::Url;
 
 use crate::args::{Args, Subcommand};
 use crate::error::Error;
@@ -6,13 +12,12 @@ use crate::error::Error;
 use monkd::metadata::Meta;
 use monkd::server::{request::Request, response::Response};
 use monkd::settings::Settings;
-use url::Url;
 
 pub struct Cli;
 
 impl Cli {
     pub async fn run(settings: Settings, args: Args) -> Result<(), Error> {
-        check_or_spawn().await?;
+        check_or_spawn(&settings).await?;
 
         let request = match args.subcommand {
             Subcommand::Add { name, url, comment } => {
@@ -54,6 +59,7 @@ impl Cli {
                     print_tabled(items);
                 }
             }
+            Response::TooManyMeta(id, metas) => print_too_many(id, metas),
             Response::NewId(id) => {
                 println!("Created ID: {}", id);
             }
@@ -84,12 +90,32 @@ impl Cli {
 }
 
 pub fn print_tabled(metas: Vec<Meta>) {
-    use term_table::{
-        row::Row,
-        table_cell::{Alignment, TableCell},
-        Table, TableStyle,
-    };
+    let table = create_meta_table(metas);
+    print!("{}", table.render());
+}
 
+pub fn print_too_many(id: String, possible: Vec<Meta>) {
+    let mut error = Vec::new();
+
+    error.push(TableCell::new_with_alignment(
+        format!("too many meta results for id: `{}`", id),
+        1,
+        Alignment::Left,
+    ));
+
+    let mut error_table = Table::new();
+    error_table.max_column_width = 40;
+    error_table.style = TableStyle::rounded();
+
+    error_table.add_row(Row::new(error));
+
+    let meta_table = create_meta_table(possible);
+
+    println!("{}", error_table.render());
+    print!("{}", meta_table.render());
+}
+
+pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
     let mut table = Table::new();
     table.max_column_width = 40;
     table.style = TableStyle::rounded();
@@ -138,12 +164,13 @@ pub fn print_tabled(metas: Vec<Meta>) {
         table.add_row(Row::new(row));
     }
 
-    print!("{}", table.render());
+    table
 }
 
-pub async fn check_or_spawn() -> Result<(), std::io::Error> {
+pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
     use std::process::{Command, Stdio};
     use sysinfo::{ProcessExt, SystemExt};
+    use tokio::net::TcpStream;
 
     let mut system = sysinfo::System::new_all();
     system.refresh_all();
@@ -161,7 +188,25 @@ pub async fn check_or_spawn() -> Result<(), std::io::Error> {
             .stdin(Stdio::null())
             .spawn()?;
 
-        tokio::time::delay_for(std::time::Duration::from_millis(200)).await;
+        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
+
+        let mut connect_flag = false;
+        for _ in 0..5u8 {
+            match TcpStream::connect((settings.daemon().address, settings.daemon().port)).await {
+                Ok(_) => {
+                    connect_flag = true;
+                    break;
+                }
+                Err(_) => {
+                    tokio::time::delay_for(std::time::Duration::from_millis(50)).await;
+                }
+            }
+        }
+
+        if !connect_flag {
+            println!("error: could not connect to daemon within 350 ms. of spawning");
+            std::process::exit(1)
+        }
     }
 
     Ok(())

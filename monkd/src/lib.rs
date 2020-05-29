@@ -32,7 +32,13 @@ pub async fn run(settings: Settings) -> Result<()> {
     tokio::spawn(Server::spawn(addr, sender, signal));
     let timeout_duration = Duration::from_millis(settings.daemon().timeout as u64);
 
-    let mut daemon = Daemon::new(&settings)?;
+    let mut daemon = match Daemon::new(&settings) {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::error!("error creating daemon: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     'main: loop {
         let request = timeout(timeout_duration, receiver.next()).await;
@@ -50,7 +56,12 @@ pub async fn run(settings: Settings) -> Result<()> {
                 break 'main;
             }
 
-            let res = daemon.handle_request(request).await?;
+            let res = match daemon.handle_request(request).await {
+                r @ Ok(_) => r,
+                Err(e) if e.is_client_error() => Ok(Response::from(e)),
+                Err(e) => Err(e),
+            }?;
+
             let _ = response.send(res);
         } else if let Ok(None) = request {
             continue;

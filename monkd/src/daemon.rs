@@ -51,95 +51,119 @@ impl<'s> Daemon<'s> {
         })
     }
 
+    pub fn offline_handle(&self) -> Arc<RwLock<OfflineStore>> {
+        Arc::clone(&self.offline)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_add(
+        &mut self,
+        name: Option<String>,
+        url: Option<url::Url>,
+        comment: Option<String>,
+    ) -> Result<Response, Error> {
+        let mut builder = Meta::builder();
+
+        if let Some(name) = name {
+            builder = builder.name(name);
+        }
+
+        if let Some(url) = url {
+            builder = builder.url(url);
+        }
+
+        if let Some(comment) = comment {
+            builder = builder.comment(comment);
+        }
+
+        let meta = builder.build();
+
+        self.store.write().await.push(meta).map(|_| Response::Ok)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_download(&mut self, id: String) -> Result<Response, Error> {
+        let store = self.store.read().await;
+        let meta = store.get(&id)?;
+
+        if let Ok(data) = self.offline.read().await.get(meta.id()) {
+            if data.status == Status::Ready {
+                return Ok(Response::Status(data.id().to_string(), Status::Ready));
+            }
+        }
+
+        let offline = self.offline_handle();
+        let meta = meta.clone();
+        tokio::spawn(async move {
+            if let Err(e) = OfflineStore::download_meta(meta, offline).await {
+                tracing::error!("{}", e);
+            }
+        });
+
+        Ok(Response::Ok)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
+        self.store.write().await.delete(&id).map(Response::Item)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_list(&mut self, count: Option<usize>) -> Result<Response, Error> {
+        if let Some(count) = count {
+            let mut data = self.store.read().await.data().to_vec();
+            data.truncate(count);
+
+            Ok(Response::List(data))
+        } else {
+            Ok(Response::List(self.store.read().await.data().to_vec()))
+        }
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_get(&mut self, id: String) -> Result<Response, Error> {
+        match self.store.read().await.get(&id) {
+            Ok(m) => Ok(Response::Item(m.clone())),
+            Err(e) => match e {
+                Error::IdNotFound(id) => Ok(Response::NotFound(id)),
+                Error::TooManyIds(id, idxs) => {
+                    let store = self.store.read().await;
+                    let metas = idxs.into_iter().map(|i| store.index(i).clone()).collect();
+
+                    Ok(Response::TooManyMeta(id, metas))
+                }
+                e => Ok(Response::Error(e.to_string())),
+            },
+        }
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn handle_open(&mut self, id: String) -> Result<Response, Error> {
+        match self.offline.read().await.get(&id) {
+            Ok(data) => {
+                if let Some(path) = &data.file {
+                    Ok(Response::Open(path.clone()))
+                } else {
+                    Ok(Response::OpenStatus(id, data.status.clone()))
+                }
+            }
+            Err(_e) => Ok(Response::Error(Error::IdNotFound(id).to_string())),
+        }
+    }
+
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
         // let offline = Arc::clone(&self.offline);
         // let store = Arc::clone(&self.store);
 
         match req {
-            Request::Add { name, url, comment } => {
-                tracing::info!("[add] {:?} {:?}", name, url);
-                let mut builder = Meta::builder();
-
-                if let Some(name) = name {
-                    builder = builder.name(name);
-                }
-
-                if let Some(url) = url {
-                    builder = builder.url(url);
-                }
-
-                if let Some(comment) = comment {
-                    builder = builder.comment(comment);
-                }
-
-                let meta = builder.build();
-                let id = meta.id().to_string();
-
-                match self.store.write().await.push(meta) {
-                    Ok(()) => Ok(Response::NewId(id)),
-                    Err(e) => Ok(Response::Error(e.to_string())),
-                }
-            }
-            Request::Delete { id } => {
-                tracing::info!("[delete] {:?}", id);
-
-                match self.store.write().await.delete(&id) {
-                    Ok(e) => Ok(Response::Item(e)),
-                    Err(e) => Ok(Response::Error(e.to_string())),
-                }
-            }
-            Request::List { count } => {
-                tracing::info!("[list] {:?}", count);
-
-                if let Some(count) = count {
-                    let mut data = self.store.read().await.data().to_vec();
-                    data.truncate(count);
-
-                    Ok(Response::List(data))
-                } else {
-                    Ok(Response::List(self.store.read().await.data().to_vec()))
-                }
-            }
-            Request::Get { id } => match self.store.read().await.get(&id) {
-                Some(m) => Ok(Response::Item(m.clone())),
-                None => Ok(Response::NotFound(id)),
-            },
-            Request::Download { id } => {
-                // We only want to download a single file:
-
-                if let Some(meta) = self.store.read().await.get(&id).cloned() {
-                    if let Some(data) = self.offline.read().await.get(meta.id()) {
-                        if data.status == Status::Ready {
-                            return Ok(Response::Status(data.id().to_string(), Status::Ready));
-                        }
-                    }
-
-                    let offline = Arc::clone(&self.offline);
-                    tokio::spawn(async move {
-                        if let Err(e) = OfflineStore::download_meta(meta, offline).await {
-                            tracing::error!("{}", e);
-                        }
-                    });
-
-                    Ok(Response::Ok)
-                } else {
-                    Ok(Response::Error(Error::IdNotFound(id).to_string()))
-                }
-            }
-            Request::Open { id } => {
-                if let Some(data) = self.offline.read().await.get(&id) {
-                    if let Some(path) = &data.file {
-                        Ok(Response::Open(path.clone()))
-                    } else {
-                        Ok(Response::OpenStatus(id, data.status.clone()))
-                    }
-                } else {
-                    Ok(Response::Error(Error::IdNotFound(id).to_string()))
-                }
-            }
+            Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
+            Request::Delete { id } => self.handle_delete(id).await,
+            Request::List { count } => self.handle_list(count).await,
+            Request::Get { id } => self.handle_get(id).await,
+            Request::Download { id } => self.handle_download(id).await,
+            Request::Open { id } => self.handle_open(id).await,
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
-
                 Ok(Response::Unhandled)
             }
         }
