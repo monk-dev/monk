@@ -10,13 +10,17 @@ async fn main() -> Result<(), Error> {
 
     let args = Args::from_args();
 
-    let mut config = Config::default();
-    config.merge(File::with_name(&args.config.to_str().unwrap()))?;
-    config.merge(Environment::with_prefix("sack_cli"))?;
+    // let mut config = Config::default();
+    // config.merge(File::with_name(&args.config.to_str().unwrap()))?;
+    // config.merge(Environment::with_prefix("sack_cli"))?;
 
-    let settings: Settings = config.try_into()?;
+    // let settings: Settings = config.try_into()?;
 
-    Cli::run(settings, args).await?;
+    let settings = Settings::get_settings(args.config.clone()).unwrap();
+
+    if let Err(e) = Cli::run(settings, args).await {
+        println!("error: {}", e);
+    }
 
     Ok(())
 }

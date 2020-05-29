@@ -15,6 +15,7 @@ pub enum Response {
     TooManyMeta(String, Vec<Meta>),
     Status(String, Status),
     OpenStatus(String, Status),
+    // Many(Vec<Response>),
     Open(PathBuf),
     Unhandled,
     Ok,

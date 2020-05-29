@@ -35,6 +35,10 @@ impl Meta {
         &self.found
     }
 
+    pub fn last_read(&self) -> Option<&DateTime<Utc>> {
+        self.last_read.as_ref()
+    }
+
     pub fn builder() -> MetaBuilder {
         MetaBuilder::new()
     }

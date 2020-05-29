@@ -20,7 +20,22 @@ impl Cli {
         check_or_spawn(&settings).await?;
 
         let request = match args.subcommand {
+            Subcommand::Config { file } => {
+                let config = Settings::get_settings(file).unwrap();
+                println!("{}", serde_yaml::to_string(&config).unwrap());
+                std::process::exit(0);
+            }
+            Subcommand::DefaultConfig => {
+                let settings = Settings::default();
+                println!("{}", serde_yaml::to_string(&settings).unwrap());
+                std::process::exit(0);
+            }
             Subcommand::Add { name, url, comment } => {
+                if name.is_none() && url.is_none() && comment.is_none() {
+                    println!("either name, url, or comment must be set");
+                    std::process::exit(1);
+                }
+
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
 
                 Request::Add { name, url, comment }
@@ -80,7 +95,7 @@ impl Cli {
             }
             Response::Ok => {}
             Response::Error(e) => {
-                println!("Server Error processing request: {}", e);
+                println!("error: {}", e);
                 std::process::exit(1);
             }
         }
@@ -111,7 +126,7 @@ pub fn print_too_many(id: String, possible: Vec<Meta>) {
 
     let meta_table = create_meta_table(possible);
 
-    println!("{}", error_table.render());
+    print!("{}", error_table.render());
     print!("{}", meta_table.render());
 }
 
@@ -130,6 +145,11 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
     ));
     row.push(TableCell::new_with_alignment("date", 1, Alignment::Center));
     row.push(TableCell::new_with_alignment("id", 1, Alignment::Center));
+    // row.push(TableCell::new_with_alignment(
+    //     "last opened",
+    //     1,
+    //     Alignment::Center,
+    // ));
     table.add_row(Row::new(row));
 
     for meta in metas {
@@ -154,13 +174,25 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
         row.push(TableCell::new_with_alignment(
             meta.found().format("%b %d, %Y").to_string(),
             1,
-            Alignment::Right,
+            Alignment::Center,
         ));
+
         row.push(TableCell::new_with_alignment(
             meta.id(),
             1,
             Alignment::Right,
         ));
+
+        // if let Some(last_read) = meta.last_read() {
+        //     row.push(TableCell::new_with_alignment(
+        //         last_read.format("%b %d, %Y").to_string(),
+        //         1,
+        //         Alignment::Center,
+        //     ));
+        // } else {
+        //     row.push(TableCell::new_with_alignment("n/a", 1, Alignment::Center));
+        // }
+
         table.add_row(Row::new(row));
     }
 
@@ -182,11 +214,21 @@ pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
     {
         // println!("Spawning the daemon");
 
-        let _monkd = Command::new("./target/debug/monkd")
+        let command_path = if std::env::var("MONK_DEBUG").is_ok() {
+            "./target/debug/monkd"
+        } else {
+            "monkd"
+        };
+
+        let _monkd = Command::new(command_path)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .stdin(Stdio::null())
-            .spawn()?;
+            .spawn()
+            .map_err(|e| {
+                println!("error spawning monkd");
+                e
+            })?;
 
         tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
 

@@ -19,6 +19,7 @@ failure = "*"
 colored = "*"
 monkd = { path = "../monkd" }
 serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "*"
 config = "*"
 reqwest = { version = "*", features = ["json"] }
 tokio = "*"

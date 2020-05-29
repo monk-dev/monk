@@ -39,15 +39,8 @@ impl FileStore {
 
     pub fn push(&mut self, meta: Meta) -> Result<(), Error> {
         self.dirty = true;
-
-        match self.metadata.binary_search_by_key(&meta.id(), |m| m.id()) {
-            Ok(_) => Err(Error::AlreadyExists(meta.id().to_string())),
-            Err(index) => {
-                self.metadata.insert(index, meta);
-                self.dirty = true;
-                Ok(())
-            }
-        }
+        self.metadata.push(meta);
+        Ok(())
     }
 
     pub fn file(&self) -> &Path {
@@ -62,7 +55,7 @@ impl FileStore {
 
         let mut store: FileStore = serde_json::from_reader(reader)?;
         store.file = path.as_ref().into();
-        store.metadata.sort_by(|l, r| l.id().cmp(r.id()));
+        // store.metadata.sort_by(|l, r| l.id().cmp(r.id()));
 
         Ok(store)
     }
@@ -155,7 +148,10 @@ impl FileStore {
         tracing::info!("Ids: {:?}", ids);
 
         if ids.len() > 1 {
-            return Err(Error::TooManyIds(id.as_ref().into(), ids));
+            return Err(Error::TooManyMetas(
+                id.as_ref().into(),
+                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
+            ));
         } else if ids.is_empty() {
             return Err(Error::IdNotFound(id.as_ref().into()));
         }
@@ -273,8 +269,14 @@ pub struct StoreSettings {
 
 impl Default for StoreSettings {
     fn default() -> Self {
-        StoreSettings {
-            path: "./store.json".into(),
+        if let Some(dirs) = crate::get_dirs() {
+            StoreSettings {
+                path: dirs.data_dir().join("store.json"),
+            }
+        } else {
+            StoreSettings {
+                path: "./store.json".into(),
+            }
         }
     }
 }

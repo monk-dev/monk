@@ -15,6 +15,7 @@ pub struct Index {
 impl Index {
     pub fn new(settings: &IndexSettings) -> Result<Self, Error> {
         let path = &settings.path;
+        std::fs::create_dir_all(&path)?;
 
         tracing::info!("Schema Version: {}", SCHEMA_VERSION);
         let schema = current_schema();

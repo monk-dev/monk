@@ -48,7 +48,6 @@ impl Error {
         match self {
             Error::IdNotFound(_)
             | Error::AlreadyExists(_)
-            | Error::TooManyIds(_, _)
             | Error::TooManyMetas(_, _)
             | Error::NoUrl(_) => true,
             _ => false,

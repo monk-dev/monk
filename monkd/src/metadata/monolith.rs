@@ -13,8 +13,10 @@ use crate::metadata::Meta;
 const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0";
 
-#[tracing::instrument(skip(store))]
+#[tracing::instrument(skip(meta, store))]
 pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Error> {
+    fs::create_dir_all(&store)?;
+
     if let Some(url) = meta.url() {
         let mut cache = HashMap::new();
         let mut header_map = HeaderMap::new();
@@ -55,6 +57,8 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
         let html: String = stringify_document(&dom.document, false, false, false, false, true);
         let filename = format!("{}.html", meta.id());
         let file_path = store.as_ref().join(filename);
+
+        tracing::info!("file_path: {}", file_path.display());
 
         tracing::info!(
             "Writing html file: {} => {}",

@@ -4,14 +4,22 @@ use structopt::StructOpt;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
-    #[structopt(default_value = "./monkd.yaml")]
-    pub config: PathBuf,
+    pub config: Option<PathBuf>,
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub enum Subcommand {
+    /// Print the the final monk config with optional config path.
+    ///
+    /// The outputted config is equivalent to the config created
+    /// from `monkd -c [file]`
+    Config {
+        file: Option<PathBuf>,
+    },
+    /// Prints the default config for monkd
+    DefaultConfig,
     /// Add an item to the database
     Add {
         /// Optional name of an item
@@ -45,7 +53,10 @@ pub enum Subcommand {
     Delete {
         id: String,
     },
+    /// Download either a single ID or all ids
     Download {
+        // #[structopt(short, long)]
+        // all: bool,
         id: String,
     },
     Open {

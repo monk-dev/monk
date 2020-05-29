@@ -9,8 +9,14 @@ pub struct IndexSettings {
 
 impl Default for IndexSettings {
     fn default() -> Self {
-        Self {
-            path: "./index".into(),
+        if let Some(dirs) = crate::get_dirs() {
+            Self {
+                path: dirs.data_dir().join("index"),
+            }
+        } else {
+            Self {
+                path: "./index".into(),
+            }
         }
     }
 }

@@ -7,14 +7,20 @@ use crate::metadata::{
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
+use tracing::info;
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
     index: Arc<RwLock<Index>>,
     offline: Arc<RwLock<OfflineStore>>,
     settings: &'s Settings,
+    in_flight: Arc<AtomicUsize>,
 }
 
 impl<'s> Daemon<'s> {
@@ -26,28 +32,23 @@ impl<'s> Daemon<'s> {
         )?));
 
         let store_clone = store.clone();
-        let delay = std::time::Duration::from_millis(
-            std::cmp::max(settings.daemon().timeout / 3, 3) as u64,
-        );
+        let store_delay = std::time::Duration::from_millis(std::cmp::max(
+            settings.daemon().timeout / 3,
+            3000,
+        ) as u64);
 
-        tokio::spawn(async move {
-            tracing::info!("Auto Commit Delay: {:3.1} s.", delay.as_secs_f32());
-            loop {
-                tokio::time::delay_for(delay).await;
+        let offline_clone = offline.clone();
+        let offline_delay = store_delay.clone();
 
-                let _ = store_clone
-                    .write()
-                    .await
-                    .commit()
-                    .map_err(|e| tracing::error!("FileStore: {}", e));
-            }
-        });
+        tokio::spawn(async move { FileStore::commit_loop(store_clone, store_delay).await });
+        tokio::spawn(async move { OfflineStore::commit_loop(offline_clone, offline_delay).await });
 
         Ok(Self {
             store,
             index,
             offline,
             settings,
+            in_flight: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -55,13 +56,13 @@ impl<'s> Daemon<'s> {
         Arc::clone(&self.offline)
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_add(
         &mut self,
         name: Option<String>,
         url: Option<url::Url>,
         comment: Option<String>,
     ) -> Result<Response, Error> {
+        info!("[add] {:?} {:?} {:?}", name, url, comment.is_some());
         let mut builder = Meta::builder();
 
         if let Some(name) = name {
@@ -78,13 +79,20 @@ impl<'s> Daemon<'s> {
 
         let meta = builder.build();
 
-        self.store.write().await.push(meta).map(|_| Response::Ok)
+        self.store
+            .write()
+            .await
+            .push(meta.clone())
+            .map(|_| Response::Item(meta))
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_download(&mut self, id: String) -> Result<Response, Error> {
         let store = self.store.read().await;
         let meta = store.get(&id)?;
+
+        if meta.url().is_none() {
+            return Ok(Response::Error(format!("`{}` has no url", id)));
+        }
 
         if let Ok(data) = self.offline.read().await.get(meta.id()) {
             if data.status == Status::Ready {
@@ -94,22 +102,26 @@ impl<'s> Daemon<'s> {
 
         let offline = self.offline_handle();
         let meta = meta.clone();
+        let semaphore = Arc::clone(&self.in_flight);
         tokio::spawn(async move {
+            semaphore.fetch_add(1, Ordering::SeqCst);
             if let Err(e) = OfflineStore::download_meta(meta, offline).await {
                 tracing::error!("{}", e);
             }
+            semaphore.fetch_sub(1, Ordering::SeqCst);
         });
 
         Ok(Response::Ok)
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
+        info!("[delete] {:?}", id);
+        let _ = self.offline.write().await.delete(&id)?;
         self.store.write().await.delete(&id).map(Response::Item)
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_list(&mut self, count: Option<usize>) -> Result<Response, Error> {
+        info!("[list] {:?}", count);
         if let Some(count) = count {
             let mut data = self.store.read().await.data().to_vec();
             data.truncate(count);
@@ -120,27 +132,31 @@ impl<'s> Daemon<'s> {
         }
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_get(&mut self, id: String) -> Result<Response, Error> {
+        info!("[get] {:?}", id);
         match self.store.read().await.get(&id) {
             Ok(m) => Ok(Response::Item(m.clone())),
             Err(e) => match e {
                 Error::IdNotFound(id) => Ok(Response::NotFound(id)),
-                Error::TooManyIds(id, idxs) => {
-                    let store = self.store.read().await;
-                    let metas = idxs.into_iter().map(|i| store.index(i).clone()).collect();
-
-                    Ok(Response::TooManyMeta(id, metas))
-                }
                 e => Ok(Response::Error(e.to_string())),
             },
         }
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn handle_open(&mut self, id: String) -> Result<Response, Error> {
+        info!("[open] {:?}", id);
         match self.offline.read().await.get(&id) {
             Ok(data) => {
+                use chrono::Utc;
+
+                {
+                    let mut store = self.store.write().await;
+                    let meta = store.get_mut(&id)?;
+
+                    let now = Utc::now();
+                    meta.last_read = Some(now);
+                }
+
                 if let Some(path) = &data.file {
                     Ok(Response::Open(path.clone()))
                 } else {
@@ -152,9 +168,6 @@ impl<'s> Daemon<'s> {
     }
 
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
-        // let offline = Arc::clone(&self.offline);
-        // let store = Arc::clone(&self.store);
-
         match req {
             Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
             Request::Delete { id } => self.handle_delete(id).await,
@@ -170,6 +183,13 @@ impl<'s> Daemon<'s> {
     }
 
     pub async fn shutdown(self) -> Result<(), Error> {
+        // Spin loop until all inflight tasks are finished:
+        loop {
+            if self.in_flight.load(Ordering::Relaxed) == 0 {
+                break;
+            }
+        }
+
         let store = self.store.write().await;
 
         if store.is_dirty() {

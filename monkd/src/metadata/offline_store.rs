@@ -23,7 +23,9 @@ impl OfflineStore {
     }
 
     pub async fn download_meta(meta: Meta, store: Arc<RwLock<OfflineStore>>) -> Result<(), Error> {
-        let root = store.read().await.file.clone();
+        tracing::info!("Downloading: {:?}", meta);
+
+        let offline_folder = store.read().await.file.join("offline");
 
         let id = meta.id().to_string();
         let mut data = OfflineData {
@@ -37,7 +39,7 @@ impl OfflineStore {
             store.write().await.push(data.clone())?;
         }
 
-        match tokio::task::spawn_blocking(move || download_meta(&meta, root)).await? {
+        match tokio::task::spawn_blocking(move || download_meta(&meta, offline_folder)).await? {
             Ok(path) => {
                 data.status = Status::Ready;
                 data.file = Some(path);
@@ -57,15 +59,20 @@ impl OfflineStore {
     fn push(&mut self, data: OfflineData) -> Result<(), Error> {
         self.dirty = true;
 
-        match self.data.binary_search_by_key(&data.id(), |m| m.id()) {
-            Ok(_) => Err(Error::AlreadyExists(data.id().to_string())),
-            Err(index) => {
-                self.data.insert(index, data);
-                self.dirty = true;
-
-                Ok(())
-            }
+        if self.get(data.id()).is_err() {
+            self.data.push(data);
         }
+
+        Ok(())
+        // match self.data.binary_search_by_key(&data.id(), |m| m.id()) {
+        //     Ok(_) => Err(Error::AlreadyExists(data.id().to_string())),
+        //     Err(index) => {
+        //         self.data.insert(index, data);
+        //         self.dirty = true;
+
+        //         Ok(())
+        //     }
+        // }
     }
 
     pub fn update(&mut self, id: impl AsRef<str>, data: OfflineData) -> Result<(), Error> {
@@ -90,7 +97,7 @@ impl OfflineStore {
             .map(|(i, _)| i)
             .collect();
 
-        tracing::info!("Ids: {:?}", ids);
+        // tracing::info!("Ids: {:?}", ids);
 
         if ids.len() > 1 {
             return Err(Error::TooManyIds(id.as_ref().into(), ids));
@@ -123,6 +130,34 @@ impl OfflineStore {
         Ok(&mut self.data[ids[0]])
     }
 
+    pub fn delete(&mut self, id: impl AsRef<str>) -> Result<OfflineData, Error> {
+        let ids: Vec<usize> = self
+            .data
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
+            .map(|(i, _)| i)
+            .collect();
+
+        tracing::info!("Ids: {:?}", ids);
+
+        if ids.len() > 1 {
+            return Err(Error::TooManyIds(id.as_ref().into(), ids));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(id.as_ref().into()));
+        }
+
+        tracing::info!("Deleting: `{}`", id.as_ref());
+        self.dirty = true;
+        let removed = self.data.swap_remove(ids[0]);
+
+        if let Some(file) = &removed.file {
+            let _ = std::fs::remove_file(file);
+        }
+
+        Ok(removed)
+    }
+
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         check_path(&path)?;
 
@@ -150,7 +185,7 @@ impl OfflineStore {
         if self.dirty {
             tracing::info!("OfflineStore dirty: {}", self.file().display());
 
-            self.write_file(self.file())?;
+            self.write_file(self.file().join("offline.json"))?;
             self.dirty = false;
         } else {
             tracing::info!("OfflineStore clean: {}", self.file().display());
@@ -241,8 +276,14 @@ pub struct OfflineSettings {
 
 impl Default for OfflineSettings {
     fn default() -> Self {
-        OfflineSettings {
-            path: "./offline".into(),
+        if let Some(dirs) = crate::get_dirs() {
+            OfflineSettings {
+                path: dirs.data_dir().into(),
+            }
+        } else {
+            OfflineSettings {
+                path: "./offline".into(),
+            }
         }
     }
 }
