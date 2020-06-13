@@ -18,7 +18,7 @@ pub enum Request {
         id: String,
     },
     Download {
-        id: String,
+        id: Option<String>,
     },
     Open {
         id: String,

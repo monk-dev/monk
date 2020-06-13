@@ -86,37 +86,69 @@ impl<'s> Daemon<'s> {
             .map(|_| Response::Item(meta))
     }
 
-    pub async fn handle_download(&mut self, id: String) -> Result<Response, Error> {
-        let store = self.store.read().await;
-        let meta = store.get(&id)?;
-
-        if meta.url().is_none() {
-            return Ok(Response::Error(format!("`{}` has no url", id)));
-        }
-
-        if let Ok(data) = self.offline.read().await.get(meta.id()) {
-            if data.status == Status::Ready {
-                return Ok(Response::Status(data.id().to_string(), Status::Ready));
+    pub async fn handle_download(&mut self, id: Option<String>) -> Result<Response, Error> {
+        if let Some(id) = id {
+            let store = self.store.read().await;
+            let meta = store.get(&id)?;
+    
+            if meta.url().is_none() {
+                return Ok(Response::Error(format!("`{}` has no url", id)));
             }
-        }
-
-        let offline = self.offline_handle();
-        let meta = meta.clone();
-        let semaphore = Arc::clone(&self.in_flight);
-        tokio::spawn(async move {
-            semaphore.fetch_add(1, Ordering::SeqCst);
-            if let Err(e) = OfflineStore::download_meta(meta, offline).await {
-                tracing::error!("{}", e);
+    
+            if let Ok(data) = self.offline.read().await.get(meta.id()) {
+                if data.status == Status::Ready {
+                    return Ok(Response::Status(data.id().to_string(), Status::Ready));
+                }
             }
-            semaphore.fetch_sub(1, Ordering::SeqCst);
-        });
+    
+            let offline = self.offline_handle();
+            let meta = meta.clone();
+            let semaphore = Arc::clone(&self.in_flight);
+            tokio::spawn(async move {
+                semaphore.fetch_add(1, Ordering::SeqCst);
+                if let Err(e) = OfflineStore::download_meta(meta, offline).await {
+                    tracing::error!("{}", e);
+                }
+                semaphore.fetch_sub(1, Ordering::SeqCst);
+            });
+    
+            Ok(Response::Ok)
+        } else {
+            let ids: Vec<String> = self.store.read().await.data().iter().map(|m| m.id().to_string()).collect();
 
-        Ok(Response::Ok)
+            for id in ids {
+                let store = self.store.read().await;
+                let meta = store.get(&id)?;
+
+                if meta.url().is_none() {
+                    return Ok(Response::Error(format!("`{}` has no url", id)));
+                }
+
+                if let Ok(data) = self.offline.read().await.get(meta.id()) {
+                    if data.status == Status::Ready {
+                        return Ok(Response::Status(data.id().to_string(), Status::Ready));
+                    }
+                }
+
+                let offline = self.offline_handle();
+                let meta = meta.clone();
+                let semaphore = Arc::clone(&self.in_flight);
+                tokio::spawn(async move {
+                    semaphore.fetch_add(1, Ordering::SeqCst);
+                    if let Err(e) = OfflineStore::download_meta(meta, offline).await {
+                        tracing::error!("{}", e);
+                    }
+                    semaphore.fetch_sub(1, Ordering::SeqCst);
+                });
+            }
+
+            Ok(Response::Ok)
+        }
     }
 
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
         info!("[delete] {:?}", id);
-        let _ = self.offline.write().await.delete(&id)?;
+        let _ = self.offline.write().await.delete(&id);
         self.store.write().await.delete(&id).map(Response::Item)
     }
 
@@ -183,6 +215,11 @@ impl<'s> Daemon<'s> {
     }
 
     pub async fn shutdown(self) -> Result<(), Error> {
+        let in_flight = self.in_flight.load(Ordering::Relaxed);
+        if in_flight != 0 {
+            tracing::info!("Downloads in flight: {}", in_flight)
+        }
+
         // Spin loop until all inflight tasks are finished:
         loop {
             if self.in_flight.load(Ordering::Relaxed) == 0 {
@@ -190,11 +227,8 @@ impl<'s> Daemon<'s> {
             }
         }
 
-        let store = self.store.write().await;
-
-        if store.is_dirty() {
-            store.write_file(&self.settings.store().path)?;
-        }
+        self.store.write().await.commit()?;
+        self.offline.write().await.commit()?;
 
         Ok(())
     }

@@ -53,11 +53,11 @@ pub enum Subcommand {
     Delete {
         id: String,
     },
-    /// Download either a single ID or all ids
+    /// Download either a single ID or all ids id empty
     Download {
         // #[structopt(short, long)]
         // all: bool,
-        id: String,
+        id: Option<String>,
     },
     Open {
         id: String,

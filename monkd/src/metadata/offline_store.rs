@@ -35,9 +35,7 @@ impl OfflineStore {
             status: Status::Downloading,
         };
 
-        {
-            store.write().await.push(data.clone())?;
-        }
+        store.write().await.push(data.clone())?;
 
         match tokio::task::spawn_blocking(move || download_meta(&meta, offline_folder)).await? {
             Ok(path) => {
@@ -49,9 +47,7 @@ impl OfflineStore {
             }
         }
 
-        {
-            store.write().await.update(id, data)?;
-        }
+        store.write().await.update(id, data)?;
 
         Ok(())
     }
