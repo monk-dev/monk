@@ -1,7 +1,7 @@
 use config::{Config, Environment, File};
 use structopt::StructOpt;
 
-use monk_cli::{args::Args, cli::Cli, error::Error};
+use monk_cli::{args::Args, cli::Cli, error::Error, args::Subcommand};
 use monkd::settings::Settings;
 
 #[tokio::main]
@@ -15,6 +15,11 @@ async fn main() -> Result<(), Error> {
     // config.merge(Environment::with_prefix("sack_cli"))?;
 
     // let settings: Settings = config.try_into()?;
+
+    if args.subcommand == Subcommand::DefaultConfig {
+        println!("{}", serde_yaml::to_string(&Settings::default()).unwrap());
+        std::process::exit(0);
+    }
 
     let settings = Settings::get_settings(args.config.clone()).unwrap();
 
