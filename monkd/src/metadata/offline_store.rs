@@ -22,36 +22,6 @@ impl OfflineStore {
         &self.file
     }
 
-    pub async fn download_meta(meta: Meta, store: Arc<RwLock<OfflineStore>>) -> Result<(), Error> {
-        tracing::info!("Downloading: {:?}", meta);
-
-        let offline_folder = store.read().await.file.join("offline");
-
-        let id = meta.id().to_string();
-        let mut data = OfflineData {
-            id: meta.id().to_string(),
-            url: meta.url().cloned(),
-            file: None,
-            status: Status::Downloading,
-        };
-
-        store.write().await.push(data.clone())?;
-
-        match tokio::task::spawn_blocking(move || download_meta(&meta, offline_folder)).await? {
-            Ok(path) => {
-                data.status = Status::Ready;
-                data.file = Some(path);
-            }
-            Err(e) => {
-                data.status = Status::Error(e.to_string());
-            }
-        }
-
-        store.write().await.update(id, data)?;
-
-        Ok(())
-    }
-
     fn push(&mut self, data: OfflineData) -> Result<(), Error> {
         self.dirty = true;
 
@@ -76,8 +46,10 @@ impl OfflineStore {
             return Err(Error::UnequalIds);
         }
 
-        let d = self.get_mut(&id)?;
-        *d = data;
+        match self.get_mut(&id) {
+            Ok(d) => *d = data,
+            Err(_) => self.push(data)?,
+        }
 
         self.dirty = true;
 
@@ -171,7 +143,7 @@ impl OfflineStore {
         let file = File::create(path)?;
         let writer = BufWriter::new(file);
 
-        serde_json::to_writer(writer, self)?;
+        serde_json::to_writer_pretty(writer, self)?;
 
         Ok(())
     }
@@ -238,6 +210,15 @@ pub enum Status {
     Ready,
     Downloading,
     Error(String),
+}
+
+impl Status {
+    pub fn is_error(&self) -> bool {
+        match self {
+            Status::Error(_) => true,
+            _ => false,
+        }
+    }   
 }
 
 impl Default for Status {

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::metadata::{offline_store::OfflineData, Meta};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Request {
     Add {
@@ -25,4 +27,8 @@ pub enum Request {
     },
     ForceShutdown,
     Stop,
+    #[serde(skip)]
+    UpdateOffline(OfflineData),
+    #[serde(skip)]
+    UpdateMeta(Meta),
 }

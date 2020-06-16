@@ -32,14 +32,14 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
             .build()
             .unwrap();
 
-        tracing::info!("Retrieving asset: {} => {}", meta.id(), url.as_str());
+        tracing::info!("[{}] Retrieving asset: {}", meta.id(), url.as_str());
 
         let (data, _final_url, _media_type) =
             retrieve_asset(&mut cache, &client, url.as_str(), url.as_str(), true)?;
 
         let dom = html_to_dom(&String::from_utf8(data)?);
 
-        tracing::info!("Embedding asset: {} => {}", meta.id(), url.as_str());
+        tracing::info!("[{}] Embedding asset: {}", meta.id(), url.as_str());
 
         walk_and_embed_assets(
             &mut cache,
@@ -58,7 +58,11 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
         let filename = format!("{}.html", meta.id());
         let file_path = store.as_ref().join(filename);
 
-        tracing::info!("file_path: {}", file_path.display());
+        tracing::info!(
+            "[{}] document file_path: {}",
+            meta.id(),
+            file_path.display()
+        );
 
         tracing::info!(
             "Writing html file: {} => {}",

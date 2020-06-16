@@ -6,25 +6,27 @@ use crate::metadata::{
 };
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
+use crate::adapter::{Adapter, AdapterSlug, http::HttpAdapter};
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, Mutex};
 use tokio::task::JoinHandle;
 use tracing::info;
+use async_lock::Lock;
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
     index: Arc<RwLock<Index>>,
     offline: Arc<RwLock<OfflineStore>>,
     settings: &'s Settings,
-    in_flight: Arc<AtomicUsize>,
+    adapters: Vec<Lock<Box<dyn Adapter>>>,
 }
 
 impl<'s> Daemon<'s> {
-    pub fn new(settings: &'s Settings) -> Result<Self, Error> {
+    pub fn new(settings: &'s Settings, adapters: Vec<Lock<Box<dyn Adapter>>>) -> Result<Self, Error> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
         let index = Arc::new(RwLock::new(Index::new(&settings.index())?));
         let offline = Arc::new(RwLock::new(OfflineStore::read_file(
@@ -48,7 +50,7 @@ impl<'s> Daemon<'s> {
             index,
             offline,
             settings,
-            in_flight: Arc::new(AtomicUsize::new(0)),
+            adapters,
         })
     }
 
@@ -79,6 +81,14 @@ impl<'s> Daemon<'s> {
 
         let meta = builder.build();
 
+        for adapter in &self.adapters {
+            let mut adapter = adapter.lock().await;
+
+            if let Some(res) = adapter.handle_add(&meta).await {
+                return res;
+            }
+        }
+
         self.store
             .write()
             .await
@@ -90,60 +100,26 @@ impl<'s> Daemon<'s> {
         if let Some(id) = id {
             let store = self.store.read().await;
             let meta = store.get(&id)?;
-    
-            if meta.url().is_none() {
-                return Ok(Response::Error(format!("`{}` has no url", id)));
-            }
-    
-            if let Ok(data) = self.offline.read().await.get(meta.id()) {
-                if data.status == Status::Ready {
-                    return Ok(Response::Status(data.id().to_string(), Status::Ready));
+
+            for adapter in &mut self.adapters {
+                let mut adapter = adapter.lock().await;
+
+                // Get the current offline data if it exists, or initialize it.
+                let data  = if let Ok(data) = self.offline.read().await.get(&id) {
+                    Some(data.clone())
+                } else {
+                    adapter.init_download(Some(&meta), None).await
+                };
+                
+                // If this adapter handled the request use it
+                if let Some(resp) = adapter.handle_download(Some(&meta), data).await {
+                    return resp;
                 }
             }
-    
-            let offline = self.offline_handle();
-            let meta = meta.clone();
-            let semaphore = Arc::clone(&self.in_flight);
-            tokio::spawn(async move {
-                semaphore.fetch_add(1, Ordering::SeqCst);
-                if let Err(e) = OfflineStore::download_meta(meta, offline).await {
-                    tracing::error!("{}", e);
-                }
-                semaphore.fetch_sub(1, Ordering::SeqCst);
-            });
-    
-            Ok(Response::Ok)
-        } else {
-            let ids: Vec<String> = self.store.read().await.data().iter().map(|m| m.id().to_string()).collect();
-
-            for id in ids {
-                let store = self.store.read().await;
-                let meta = store.get(&id)?;
-
-                if meta.url().is_none() {
-                    return Ok(Response::Error(format!("`{}` has no url", id)));
-                }
-
-                if let Ok(data) = self.offline.read().await.get(meta.id()) {
-                    if data.status == Status::Ready {
-                        return Ok(Response::Status(data.id().to_string(), Status::Ready));
-                    }
-                }
-
-                let offline = self.offline_handle();
-                let meta = meta.clone();
-                let semaphore = Arc::clone(&self.in_flight);
-                tokio::spawn(async move {
-                    semaphore.fetch_add(1, Ordering::SeqCst);
-                    if let Err(e) = OfflineStore::download_meta(meta, offline).await {
-                        tracing::error!("{}", e);
-                    }
-                    semaphore.fetch_sub(1, Ordering::SeqCst);
-                });
-            }
-
-            Ok(Response::Ok)
         }
+
+        // No adapter capable of handling the download
+        Ok(Response::Unhandled)
     }
 
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
@@ -200,6 +176,8 @@ impl<'s> Daemon<'s> {
     }
 
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
+        tracing::info!("handling request: {:?}", req);
+
         match req {
             Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
             Request::Delete { id } => self.handle_delete(id).await,
@@ -207,6 +185,14 @@ impl<'s> Daemon<'s> {
             Request::Get { id } => self.handle_get(id).await,
             Request::Download { id } => self.handle_download(id).await,
             Request::Open { id } => self.handle_open(id).await,
+            Request::UpdateMeta(m) => {
+                self.store.write().await.update(m.id().to_string(), m)?;
+                Ok(Response::Ok)
+            }
+            Request::UpdateOffline(o) => {
+                self.offline.write().await.update(o.id().to_string(), o)?;
+                Ok(Response::Ok)
+            }
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
                 Ok(Response::Unhandled)
@@ -215,21 +201,11 @@ impl<'s> Daemon<'s> {
     }
 
     pub async fn shutdown(self) -> Result<(), Error> {
-        let in_flight = self.in_flight.load(Ordering::Relaxed);
-        if in_flight != 0 {
-            tracing::info!("Downloads in flight: {}", in_flight)
-        }
-
-        // Spin loop until all inflight tasks are finished:
-        loop {
-            if self.in_flight.load(Ordering::Relaxed) == 0 {
-                break;
-            }
-        }
-
+        // Commit any changes to the store
         self.store.write().await.commit()?;
         self.offline.write().await.commit()?;
 
         Ok(())
     }
 }
+

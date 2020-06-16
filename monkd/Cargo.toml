@@ -12,6 +12,8 @@ path = "./src/bin/monkd.rs"
 
 [dependencies]
 # crossbeam-channel = "*"
+async-channel = "*"
+async-lock = "*"
 tokio = { version = "*", features = ["full"] }
 futures = "*"
 url =   { version = "*", features = ["serde"] }
@@ -33,3 +35,4 @@ tantivy = { git = "https://github.com/tantivy-search/tantivy.git" }
 monolith = { path = "../monolith" }
 reqwest = "*"
 directories-next = "*"
+async-trait = "*"

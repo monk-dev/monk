@@ -16,7 +16,7 @@ pub struct Server;
 impl Server {
     pub async fn spawn(
         addr: impl Into<SocketAddr> + 'static,
-        sender: Sender<(Request, oneshot::Sender<Response>)>,
+        sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
         shutdown: oneshot::Receiver<()>,
     ) {
         let sender = warp::any().map(move || sender.clone());
@@ -38,11 +38,11 @@ impl Server {
 
 #[tracing::instrument]
 pub async fn handle(
-    mut sender: Sender<(Request, oneshot::Sender<Response>)>,
+    mut sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
     req: Request,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let (send, resp) = oneshot::channel();
-    sender.send((req, send)).await.map_err(|_| ()).unwrap();
+    sender.send((req, Some(send))).await.map_err(|_| ()).unwrap();
 
     Ok(match resp.await {
         Ok(r) => json(&r),
