@@ -25,6 +25,14 @@ pub enum Request {
     Open {
         id: String,
     },
+    Search {
+        query: String,
+    },
+    Index {
+        id: String,
+    },
+    IndexAll,
+    IndexStatus,
     ForceShutdown,
     Stop,
     #[serde(skip)]

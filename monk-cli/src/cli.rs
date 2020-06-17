@@ -43,6 +43,8 @@ impl Cli {
             Subcommand::List { count } => Request::List { count },
             Subcommand::Delete { id } => Request::Delete { id },
             Subcommand::Get { id } => Request::Get { id },
+            Subcommand::Search { query } => Request::Search { query },
+            Subcommand::Index { id } => Request::Index { id },
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
             Subcommand::Download { id } => Request::Download { id },

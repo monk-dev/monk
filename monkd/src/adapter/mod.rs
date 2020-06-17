@@ -1,10 +1,10 @@
 pub mod http;
 
-use serde::{Serialize, Deserialize};
-use async_trait::async_trait;
 use crate::error::Error;
 use crate::metadata::{offline_store::OfflineData, Meta};
 use crate::{Request, Response};
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdapterSlug {
@@ -13,7 +13,8 @@ pub enum AdapterSlug {
 
 #[async_trait]
 pub trait Adapter
-where Self: Send
+where
+    Self: Send,
 {
     /// Initialize an adapter with the provided configuration string. If `None`
     /// is returned, the `Self::default()` implementation will be used. The provided

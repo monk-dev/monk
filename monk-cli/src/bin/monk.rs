@@ -1,7 +1,7 @@
 use config::{Config, Environment, File};
 use structopt::StructOpt;
 
-use monk_cli::{args::Args, cli::Cli, error::Error, args::Subcommand};
+use monk_cli::{args::Args, args::Subcommand, cli::Cli, error::Error};
 use monkd::settings::Settings;
 
 #[tokio::main]

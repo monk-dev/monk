@@ -5,13 +5,17 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use url::Url;
 use tokio::sync::oneshot;
+use url::Url;
 
 use crate::{
     adapter::Adapter,
     error::Error,
-    metadata::{offline_store::{OfflineData, OfflineStore, Status}, Meta, monolith},
+    metadata::{
+        monolith,
+        offline_store::{OfflineData, OfflineStore, Status},
+        Meta,
+    },
     Request, Response,
 };
 
@@ -23,7 +27,10 @@ pub struct HttpAdapter {
 }
 
 impl HttpAdapter {
-    pub fn new(offline_folder: PathBuf, sender: Sender<(Request, Option<oneshot::Sender<Response>>)>) -> Self {
+    pub fn new(
+        offline_folder: PathBuf,
+        sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
+    ) -> Self {
         tracing::info!("Created HTTP Adapter");
 
         Self {
@@ -42,7 +49,10 @@ impl Adapter for HttpAdapter {
         offline: Option<OfflineData>,
     ) -> Option<OfflineData> {
         if let Some(offline) = offline {
-            if offline.status == Status::Ready || offline.status.is_error() || !valid_url(offline.url.as_ref()) {
+            if offline.status == Status::Ready
+                || offline.status.is_error()
+                || !valid_url(offline.url.as_ref())
+            {
                 None
             } else {
                 Some(offline)
@@ -83,26 +93,25 @@ impl Adapter for HttpAdapter {
                 }
             }
 
-            let offline_data = offline.unwrap_or_else(|| {
-                OfflineData {
-                    id: meta.id().to_string(),
-                    url: meta.url().cloned(),
-                    file: None,
-                    status: Status::Downloading,
-                }
+            let offline_data = offline.unwrap_or_else(|| OfflineData {
+                id: meta.id().to_string(),
+                url: meta.url().cloned(),
+                file: None,
+                status: Status::Downloading,
             });
 
             let meta = meta.clone();
             let semaphore = Arc::clone(&self.in_flight);
             let sender = self.sender.clone();
             let offline_folder = self.offline_folder.join("offline");
-            
+
             tokio::spawn(async move {
                 semaphore.fetch_add(1, Ordering::SeqCst);
                 match download_meta(meta, offline_folder, offline_data).await {
                     Ok(new_data) => {
                         tracing::info!("sending updated offline_data: {:?}", new_data);
-                        if let Err(e) = sender.send((Request::UpdateOffline(new_data), None)).await {
+                        if let Err(e) = sender.send((Request::UpdateOffline(new_data), None)).await
+                        {
                             tracing::error!("{}", e);
                         }
                     }
@@ -137,11 +146,16 @@ impl Adapter for HttpAdapter {
     }
 }
 
-
-async fn download_meta(meta: Meta, offline_folder: PathBuf, mut data: OfflineData) -> Result<OfflineData, Error> {
+async fn download_meta(
+    meta: Meta,
+    offline_folder: PathBuf,
+    mut data: OfflineData,
+) -> Result<OfflineData, Error> {
     tracing::info!("[HTTP] download_meta: {:?}", meta.url());
 
-    match tokio::task::spawn_blocking(move || monolith::download_meta(&meta, offline_folder)).await? {
+    match tokio::task::spawn_blocking(move || monolith::download_meta(&meta, offline_folder))
+        .await?
+    {
         Ok(path) => {
             data.status = Status::Ready;
             data.file = Some(path);

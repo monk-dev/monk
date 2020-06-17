@@ -53,7 +53,7 @@ pub enum Subcommand {
     Delete {
         id: String,
     },
-    /// Download either a single ID or all ids id empty
+    /// Download either a single ID or all ids if empty
     Download {
         // #[structopt(short, long)]
         // all: bool,
@@ -61,6 +61,26 @@ pub enum Subcommand {
     },
     Open {
         id: String,
+    },
+    /// Run an ID through the full text search indexing pipeline
+    Index {
+        id: String,
+    },
+    /// Search for metadata based off of the given query
+    ///
+    /// The query grammar is very simplistic. A query is tokenized and an
+    /// "OR" is inserted between tokens. Remove the '`' when writing a query
+    /// on the CLI. Quotes are used for phrase queries. {n}{n}
+    /// 1. `sea whale` for results containing "sea" OR "whale" {n}
+    /// 2. `+sea -whale` for results that must have "sea" and not have "whale" {n}
+    /// 3. `pears AND apples` for a conjunction of the two {n}
+    /// 4. `"Phrase Query"` for "phrase" followed by "query" (use quotes). {n}
+    /// 5. `*` for simply everything. {n}
+    ///
+    /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
+    Search {
+        /// A properly structured search query
+        query: String,
     },
     /// Shutdown the daemon with no cleanup
     ForceShutdown,

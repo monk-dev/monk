@@ -1,3 +1,4 @@
+use crate::adapter::{http::HttpAdapter, Adapter, AdapterSlug};
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{
@@ -6,16 +7,15 @@ use crate::metadata::{
 };
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
-use crate::adapter::{Adapter, AdapterSlug, http::HttpAdapter};
 
+use async_lock::Lock;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use tracing::info;
-use async_lock::Lock;
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
@@ -26,7 +26,10 @@ pub struct Daemon<'s> {
 }
 
 impl<'s> Daemon<'s> {
-    pub fn new(settings: &'s Settings, adapters: Vec<Lock<Box<dyn Adapter>>>) -> Result<Self, Error> {
+    pub fn new(
+        settings: &'s Settings,
+        adapters: Vec<Lock<Box<dyn Adapter>>>,
+    ) -> Result<Self, Error> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
         let index = Arc::new(RwLock::new(Index::new(&settings.index())?));
         let offline = Arc::new(RwLock::new(OfflineStore::read_file(
@@ -89,11 +92,16 @@ impl<'s> Daemon<'s> {
             }
         }
 
+        // TODO: Use `Response::Many` for these errors
+        // e.g. We still want to add to store even if
+        // indexing failes.
+        self.index.write().await.insert(&meta)?;
+
         self.store
             .write()
             .await
             .push(meta.clone())
-            .map(|_| Response::Item(meta))
+            .map(|_| Response::Item(meta.clone()))
     }
 
     pub async fn handle_download(&mut self, id: Option<String>) -> Result<Response, Error> {
@@ -105,12 +113,12 @@ impl<'s> Daemon<'s> {
                 let mut adapter = adapter.lock().await;
 
                 // Get the current offline data if it exists, or initialize it.
-                let data  = if let Ok(data) = self.offline.read().await.get(&id) {
+                let data = if let Ok(data) = self.offline.read().await.get(&id) {
                     Some(data.clone())
                 } else {
                     adapter.init_download(Some(&meta), None).await
                 };
-                
+
                 // If this adapter handled the request use it
                 if let Some(resp) = adapter.handle_download(Some(&meta), data).await {
                     return resp;
@@ -125,6 +133,9 @@ impl<'s> Daemon<'s> {
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
         info!("[delete] {:?}", id);
         let _ = self.offline.write().await.delete(&id);
+        let _ = self.index.write().await.delete(&id);
+
+        // We currently only really care if it was in the store.
         self.store.write().await.delete(&id).map(Response::Item)
     }
 
@@ -149,6 +160,18 @@ impl<'s> Daemon<'s> {
                 e => Ok(Response::Error(e.to_string())),
             },
         }
+    }
+
+    pub async fn handle_search(&mut self, query: String) -> Result<Response, Error> {
+        let ids = self.index.write().await.search(query)?;
+        let mut metas = Vec::new();
+
+        for id in ids {
+            let meta = self.store.read().await.get(id)?.clone();
+            metas.push(meta)
+        }
+
+        Ok(Response::List(metas))
     }
 
     pub async fn handle_open(&mut self, id: String) -> Result<Response, Error> {
@@ -193,6 +216,9 @@ impl<'s> Daemon<'s> {
                 self.offline.write().await.update(o.id().to_string(), o)?;
                 Ok(Response::Ok)
             }
+            Request::Search { query } => {
+                self.handle_search(query).await
+            }
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
                 Ok(Response::Unhandled)
@@ -208,4 +234,3 @@ impl<'s> Daemon<'s> {
         Ok(())
     }
 }
-
