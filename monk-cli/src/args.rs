@@ -80,7 +80,7 @@ pub enum Subcommand {
     /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
     Search {
         /// A properly structured search query
-        query: String,
+        query: Vec<String>,
     },
     /// Shutdown the daemon with no cleanup
     ForceShutdown,

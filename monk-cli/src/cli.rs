@@ -43,7 +43,11 @@ impl Cli {
             Subcommand::List { count } => Request::List { count },
             Subcommand::Delete { id } => Request::Delete { id },
             Subcommand::Get { id } => Request::Get { id },
-            Subcommand::Search { query } => Request::Search { query },
+            Subcommand::Search { query } => {
+                let query = query.join(" ");
+                
+                Request::Search { query }
+            },
             Subcommand::Index { id } => Request::Index { id },
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
