@@ -75,7 +75,7 @@ pub enum Subcommand {
     /// 2. `+sea -whale` for results that must have "sea" and not have "whale" {n}
     /// 3. `pears AND apples` for a conjunction of the two {n}
     /// 4. `"Phrase Query"` for "phrase" followed by "query" (use quotes). {n}
-    /// 5. `*` for simply everything. {n}
+    /// 5. `*` for simply everything.
     ///
     /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
     Search {
