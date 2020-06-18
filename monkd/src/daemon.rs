@@ -2,12 +2,14 @@ use crate::adapter::{http::HttpAdapter, Adapter, AdapterSlug};
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{
+    meta::IndexStatus,
     offline_store::{OfflineData, OfflineStore, Status},
     FileStore, Meta,
 };
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
+use async_channel::Sender;
 use async_lock::Lock;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -21,13 +23,15 @@ pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
     index: Arc<RwLock<Index>>,
     offline: Arc<RwLock<OfflineStore>>,
-    settings: &'s Settings,
+    daemon_sender: Sender<(Request, Option<tokio::sync::oneshot::Sender<Response>>)>,
     adapters: Vec<Lock<Box<dyn Adapter>>>,
+    settings: &'s Settings,
 }
 
 impl<'s> Daemon<'s> {
     pub fn new(
         settings: &'s Settings,
+        daemon_sender: Sender<(Request, Option<tokio::sync::oneshot::Sender<Response>>)>,
         adapters: Vec<Lock<Box<dyn Adapter>>>,
     ) -> Result<Self, Error> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
@@ -52,8 +56,9 @@ impl<'s> Daemon<'s> {
             store,
             index,
             offline,
-            settings,
+            daemon_sender,
             adapters,
+            settings,
         })
     }
 
@@ -94,14 +99,58 @@ impl<'s> Daemon<'s> {
 
         // TODO: Use `Response::Many` for these errors
         // e.g. We still want to add to store even if
-        // indexing failes.
-        self.index.write().await.insert(&meta)?;
+        // indexing fails.
+        self.index.write().await.insert_meta(&meta)?;
 
         self.store
             .write()
             .await
             .push(meta.clone())
             .map(|_| Response::Item(meta.clone()))
+    }
+
+    pub async fn handle_index(&mut self, id: String) -> Result<Response, Error> {
+        let mut meta = {
+            let mut store = self.store.write().await;
+
+            let mut meta = store.get_mut(&id)?;
+            meta.index_status = Some(IndexStatus::Indexing);
+
+            meta.clone()
+        };
+
+        let offline = { self.offline.read().await.get(&id).ok().cloned() };
+
+        let mut index = self.index.write().await;
+
+        for adapter in &mut self.adapters {
+            let mut adapter = adapter.lock().await;
+
+            if let Some(result) = adapter
+                .handle_index(&meta, offline.as_ref(), &mut index)
+                .await
+            {
+                // This meta was successfully indexed by this adapter:
+                if result.is_ok() {
+                    meta.index_status = Some(IndexStatus::Indexed);
+                    let _ = self.daemon_sender.send((Request::UpdateMeta(meta), None)).await;
+                }
+
+                return result.map(|_| Response::Ok);
+            }
+        }
+
+        Ok(Response::NoAdapterFound(meta.id().to_string()))
+    }
+
+    pub async fn handle_index_status(&self, id: String) -> Result<Response, Error> {
+        Ok(Response::IndexStatus(id.clone(), self
+            .store
+            .read()
+            .await
+            .get(&id)?
+            .index_status
+            .clone()))
     }
 
     pub async fn handle_download(&mut self, id: Option<String>) -> Result<Response, Error> {
@@ -162,8 +211,9 @@ impl<'s> Daemon<'s> {
         }
     }
 
-    pub async fn handle_search(&mut self, query: String) -> Result<Response, Error> {
-        let ids = self.index.write().await.search(query)?;
+    pub async fn handle_search(&mut self, query: String, count: Option<usize>) -> Result<Response, Error> {
+        let count = count.unwrap_or(1).max(1);
+        let ids = self.index.write().await.search(query, count)?;
         let mut metas = Vec::new();
 
         for id in ids {
@@ -216,9 +266,13 @@ impl<'s> Daemon<'s> {
                 self.offline.write().await.update(o.id().to_string(), o)?;
                 Ok(Response::Ok)
             }
-            Request::Search { query } => {
-                self.handle_search(query).await
+            Request::Index { id } => {
+                self.handle_index(id).await
             }
+            Request::IndexStatus { id } => {
+                self.handle_index_status(id).await
+            }
+            Request::Search { count, query } => self.handle_search(query, count).await,
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
                 Ok(Response::Unhandled)

@@ -6,7 +6,7 @@ use term_table::{
 };
 use url::Url;
 
-use crate::args::{Args, Subcommand};
+use crate::args::{Args, Subcommand, IndexSubcommand};
 use crate::error::Error;
 
 use monkd::metadata::Meta;
@@ -43,12 +43,21 @@ impl Cli {
             Subcommand::List { count } => Request::List { count },
             Subcommand::Delete { id } => Request::Delete { id },
             Subcommand::Get { id } => Request::Get { id },
-            Subcommand::Search { query } => {
+            Subcommand::Search { count, query } => {
                 let query = query.join(" ");
-                
-                Request::Search { query }
+
+                Request::Search { count: Some(count), query }
+            }
+            Subcommand::Index { command } => {
+                match command {
+                    IndexSubcommand::Status { id } => {
+                        Request::IndexStatus { id }
+                    },
+                    IndexSubcommand::Id(id) => {
+                        Request::Index { id: id[0].clone() }
+                    }
+                }
             },
-            Subcommand::Index { id } => Request::Index { id },
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
             Subcommand::Download { id } => Request::Download { id },
@@ -87,8 +96,14 @@ impl Cli {
             Response::NotFound(id) => {
                 println!("ID not found: {}", id);
             }
+            Response::NoAdapterFound(id) => {
+                println!("An adapter to handle `{}` could not be found.", id);
+            }
             Response::Status(id, status) => {
                 println!("Status for `{}`: {:?}", id, status);
+            }
+            Response::IndexStatus(id, status) => {
+                println!("[{}] {}",id, status.map(|s| format!("{:?}", s)).unwrap_or_else(|| "no status".into()));
             }
             Response::OpenStatus(id, status) => {
                 println!("`{}` cannot be open, status: {:?}", id, status);

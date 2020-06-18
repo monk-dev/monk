@@ -12,6 +12,7 @@ pub struct Meta {
     #[serde(with = "ts_milliseconds")]
     pub(crate) found: DateTime<Utc>,
     pub(crate) last_read: Option<DateTime<Utc>>,
+    pub(crate) index_status: Option<IndexStatus>,
 }
 
 impl Meta {
@@ -41,6 +42,27 @@ impl Meta {
 
     pub fn builder() -> MetaBuilder {
         MetaBuilder::new()
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum IndexStatus {
+    Indexing,
+    Indexed,
+    Old,
+}
+
+impl IndexStatus {
+    pub fn is_indexing(&self) -> bool {
+        *self == IndexStatus::Indexing
+    }
+
+    pub fn is_indexed(&self) -> bool {
+        *self == IndexStatus::Indexed
+    }
+
+    pub fn is_old(&self) -> bool {
+        *self == IndexStatus::Old
     }
 }
 
@@ -127,6 +149,7 @@ impl MetaBuilder {
             comment: self.comment,
             found,
             last_read: self.last_read,
+            index_status: None,
         }
     }
 }

@@ -11,6 +11,7 @@ use url::Url;
 use crate::{
     adapter::Adapter,
     error::Error,
+    index::Index,
     metadata::{
         monolith,
         offline_store::{OfflineData, OfflineStore, Status},
@@ -124,6 +125,59 @@ impl Adapter for HttpAdapter {
         } else {
             None
         }
+    }
+
+    async fn handle_index(
+        &mut self,
+        meta: &Meta,
+        offline: Option<&OfflineData>,
+        index: &mut Index,
+    ) -> Option<Result<(), Error>> {
+        use scraper::{Html, Selector};
+
+        tracing::info!("[http] indexing: {}", meta.id());
+
+        let offline = offline?;
+        let path = offline.file()?;
+
+        let data = match std::fs::read_to_string(path) {
+            Ok(s) => s,
+            Err(e) => return Some(Err(e.into())),
+        };
+
+        // At this point there is data to be parsed,
+        // so we delete whatever is in the current index
+        // and re-add the meta item and data.
+        if let Err(e) = index.delete(meta.id()) {
+            return Some(Err(e));
+        }
+
+        tracing::info!("[http] scraping: {}", meta.id());
+
+        let document = Html::parse_document(&data);
+        let p_tag = Selector::parse("body p").unwrap();
+
+        let mut body_data = String::with_capacity(512);
+
+        for paragraph in document.select(&p_tag) {
+            for text in paragraph.text() {
+                body_data.push_str(text);
+            }
+        }
+
+        // tracing::info!("[{}] body: {}", meta.id(), body_data);
+
+        // TODO: selector for <meta name="description" content="***"> 
+        let title_selector = Selector::parse("title").unwrap();
+        let title = document.select(&title_selector).next().map(|node| node.inner_html());
+
+        tracing::info!("[http] indexing: {}", meta.id());
+
+        Some(
+            index
+                .insert_meta_with_data(meta, title.as_deref(), Some(&body_data), None)
+                .map(|_| ()),
+        )
     }
 
     async fn shutdown(&mut self) -> Result<(), Error> {

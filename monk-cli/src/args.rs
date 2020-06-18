@@ -64,7 +64,12 @@ pub enum Subcommand {
     },
     /// Run an ID through the full text search indexing pipeline
     Index {
-        id: String,
+        // /// Retrieve the indexing status for the given ID
+        // #[structopt(short, long)]
+        // status: bool,
+        /// Indexing subcommand. Write an ID to simply index that ID.
+        #[structopt(subcommand)]
+        command: IndexSubcommand,
     },
     /// Search for metadata based off of the given query
     ///
@@ -79,6 +84,9 @@ pub enum Subcommand {
     ///
     /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
     Search {
+        /// Maximum number of items to return
+        #[structopt(short, long, default_value = "1")]
+        count: usize,
         /// A properly structured search query
         query: Vec<String>,
     },
@@ -86,4 +94,16 @@ pub enum Subcommand {
     ForceShutdown,
     /// Cleanly shutdown the daemon
     Stop,
+}
+
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, StructOpt)]
+pub enum IndexSubcommand {
+    /// Get the indexing status of an ID
+    Status {
+        id: String,
+    },
+    /// Index the given ID
+    #[structopt(external_subcommand)]
+    Id(Vec<String>),
 }

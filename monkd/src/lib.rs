@@ -30,8 +30,9 @@ use tokio::time::delay_for;
 pub async fn run(settings: Settings) -> Result<()> {
     let start_time = Instant::now();
 
-    let (sender, mut http_receiver) = mpsc::channel(100);
-    let (adapter_sender, mut adapter_receiver) = async_channel::bounded(100);
+    let (sender, mut http_receiver) = mpsc::channel(1024);
+    let (adapter_sender, mut adapter_receiver) = async_channel::bounded(1024);
+    let (daemon_sender, mut daemon_receiver) = async_channel::bounded(1024);
     let (shutdown, signal) = oneshot::channel::<()>();
 
     let addr = SocketAddr::new(settings.daemon().address, settings.daemon().port);
@@ -41,7 +42,7 @@ pub async fn run(settings: Settings) -> Result<()> {
 
     let adapters = create_adapters(&settings, adapter_sender);
 
-    let mut daemon = match Daemon::new(&settings, adapters.clone()) {
+    let mut daemon = match Daemon::new(&settings, daemon_sender, adapters.clone()) {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("error creating daemon: {}", e);
@@ -56,6 +57,9 @@ pub async fn run(settings: Settings) -> Result<()> {
                 Some(a)
             },
             a = adapter_receiver.next().fuse() => {
+                Some(a)
+            },
+            a = daemon_receiver.next().fuse() => {
                 Some(a)
             },
             t = timeout => {

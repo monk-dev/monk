@@ -26,13 +26,16 @@ pub enum Request {
         id: String,
     },
     Search {
+        count: Option<usize>,
         query: String,
     },
     Index {
         id: String,
     },
     IndexAll,
-    IndexStatus,
+    IndexStatus {
+        id: String,
+    },
     ForceShutdown,
     Stop,
     #[serde(skip)]
