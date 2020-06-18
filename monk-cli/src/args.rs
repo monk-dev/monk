@@ -62,7 +62,10 @@ pub enum Subcommand {
     Open {
         id: String,
     },
-    /// Run an ID through the full text search indexing pipeline
+    /// Run an ID through the full text search indexing pipeline. Simply write
+    /// an ID after `index` to index that ID.
+    ///
+    /// Example: `monk index t4v`
     Index {
         // /// Retrieve the indexing status for the given ID
         // #[structopt(short, long)]
@@ -96,14 +99,13 @@ pub enum Subcommand {
     Stop,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, StructOpt)]
 pub enum IndexSubcommand {
-    /// Get the indexing status of an ID
-    Status {
-        id: String,
-    },
+    /// Get the current index status of an ID
+    Status { id: String },
+    /// Index everything
+    All,
     /// Index the given ID
-    #[structopt(external_subcommand)]
+    #[structopt(external_subcommand, doc="Index the given ID")]
     Id(Vec<String>),
 }

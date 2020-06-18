@@ -22,10 +22,10 @@ impl Server {
         let sender = warp::any().map(move || sender.clone());
 
         let route = warp::any()
-        .and(sender)
-        .and(warp::body::json())
-        .and_then(handle)
-        .with(warp::filters::log::log("warp"));
+            .and(sender)
+            .and(warp::body::json())
+            .and_then(handle)
+            .with(warp::filters::log::log("warp"));
 
         let server = warp::serve(route);
 

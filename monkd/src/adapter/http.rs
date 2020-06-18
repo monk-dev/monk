@@ -127,6 +127,10 @@ impl Adapter for HttpAdapter {
         }
     }
 
+    fn will_index(&self, meta: &Meta, offline: Option<&OfflineData>) -> bool {
+        valid_url(meta.url()) && offline.map(|o| o.file().is_some()).unwrap_or_default()
+    }
+
     async fn handle_index(
         &mut self,
         meta: &Meta,
@@ -165,11 +169,12 @@ impl Adapter for HttpAdapter {
             }
         }
 
-        // tracing::info!("[{}] body: {}", meta.id(), body_data);
-
-        // TODO: selector for <meta name="description" content="***"> 
+        // TODO: selector for <meta name="description" content="***">
         let title_selector = Selector::parse("title").unwrap();
-        let title = document.select(&title_selector).next().map(|node| node.inner_html());
+        let title = document
+            .select(&title_selector)
+            .next()
+            .map(|node| node.inner_html());
 
         tracing::info!("[http] indexing: {}", meta.id());
 

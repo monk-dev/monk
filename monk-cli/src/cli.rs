@@ -6,7 +6,7 @@ use term_table::{
 };
 use url::Url;
 
-use crate::args::{Args, Subcommand, IndexSubcommand};
+use crate::args::{Args, IndexSubcommand, Subcommand};
 use crate::error::Error;
 
 use monkd::metadata::Meta;
@@ -46,17 +46,15 @@ impl Cli {
             Subcommand::Search { count, query } => {
                 let query = query.join(" ");
 
-                Request::Search { count: Some(count), query }
-            }
-            Subcommand::Index { command } => {
-                match command {
-                    IndexSubcommand::Status { id } => {
-                        Request::IndexStatus { id }
-                    },
-                    IndexSubcommand::Id(id) => {
-                        Request::Index { id: id[0].clone() }
-                    }
+                Request::Search {
+                    count: Some(count),
+                    query,
                 }
+            }
+            Subcommand::Index { command } => match command {
+                IndexSubcommand::Status { id } => Request::IndexStatus { id },
+                IndexSubcommand::Id(id) => Request::Index { id: id[0].clone() },
+                IndexSubcommand::All => Request::IndexAll,
             },
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
@@ -76,52 +74,70 @@ impl Cli {
             .json::<Response>()
             .await?;
 
-        match response {
-            Response::Item(meta) => {
-                print_tabled(vec![meta]);
-            }
-            Response::List(mut items) => {
-                items.sort_by_key(|i| *i.found());
-
-                if items.is_empty() {
-                    println!("no items returned");
-                } else {
-                    print_tabled(items);
-                }
-            }
-            Response::TooManyMeta(id, metas) => print_too_many(id, metas),
-            Response::NewId(id) => {
-                println!("Created ID: {}", id);
-            }
-            Response::NotFound(id) => {
-                println!("ID not found: {}", id);
-            }
-            Response::NoAdapterFound(id) => {
-                println!("An adapter to handle `{}` could not be found.", id);
-            }
-            Response::Status(id, status) => {
-                println!("Status for `{}`: {:?}", id, status);
-            }
-            Response::IndexStatus(id, status) => {
-                println!("[{}] {}",id, status.map(|s| format!("{:?}", s)).unwrap_or_else(|| "no status".into()));
-            }
-            Response::OpenStatus(id, status) => {
-                println!("`{}` cannot be open, status: {:?}", id, status);
-            }
-            Response::Open(path) => {
-                open::that(path).unwrap();
-            }
-            Response::Unhandled => {
-                println!("Unhandled Request");
-            }
-            Response::Ok => {}
-            Response::Error(e) => {
-                println!("error: {}", e);
-                std::process::exit(1);
-            }
-        }
+        handle_response(response);
 
         Ok(())
+    }
+}
+
+pub fn handle_response(response: Response) {
+    match response {
+        Response::Item(meta) => {
+            print_tabled(vec![meta]);
+        }
+        Response::List(mut items) => {
+            items.sort_by_key(|i| *i.found());
+
+            if items.is_empty() {
+                println!("no items returned");
+            } else {
+                print_tabled(items);
+            }
+        }
+        Response::TooManyMeta(id, metas) => print_too_many(id, metas),
+        Response::NewId(id) => {
+            println!("[{}] created", id);
+        }
+        Response::NotFound(id) => {
+            println!("[{}] not found", id);
+        }
+        Response::NoAdapterFound(id) => {
+            println!("An adapter that could handle `{}` could not be found.", id);
+        }
+        Response::Status(id, status) => {
+            println!("Status for `{}`: {:?}", id, status);
+        }
+        Response::IndexStatus(id, status) => {
+            println!(
+                "[{}] {}",
+                id,
+                status
+                    .map(|s| format!("{:?}", s))
+                    .unwrap_or_else(|| "not indexed".into())
+            );
+        }
+        Response::Indexing(id) => {
+            println!("[{}] indexing", id);
+        }
+        Response::OpenStatus(id, status) => {
+            println!("[{}] cannot be opened: {:?}", id, status);
+        }
+        Response::Open(path) => {
+            open::that(path).unwrap();
+        }
+        Response::Unhandled => {
+            println!("Unhandled Request");
+        }
+        Response::Many(responses) => {
+            for response in responses {
+                handle_response(response);
+            }
+        }
+        Response::Ok => {}
+        Response::Error(e) => {
+            println!("error: {}", e);
+            std::process::exit(1);
+        }
     }
 }
 

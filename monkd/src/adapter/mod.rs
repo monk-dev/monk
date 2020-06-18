@@ -50,6 +50,10 @@ where
         None
     }
 
+    fn will_index(&self, meta: &Meta, offline: Option<&OfflineData>) -> bool {
+        false
+    }
+
     async fn handle_index(
         &mut self,
         meta: &Meta,

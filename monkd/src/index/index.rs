@@ -41,7 +41,10 @@ impl Index {
 
         // tracing::info!("Got reader and searcher");
 
-        let query_parser = QueryParser::for_index(&self.index, vec![ID, NAME, URL, COMMENT, BODY, TITLE, EXTRA]);
+        let query_parser = QueryParser::for_index(
+            &self.index,
+            vec![ID, NAME, URL, COMMENT, BODY, TITLE, EXTRA],
+        );
         let query = query_parser.parse_query(&query)?;
 
         // tracing::info!("Parsed query");
