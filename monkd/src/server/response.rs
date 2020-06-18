@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::error::Error;
 use crate::metadata::offline_store::Status;
-use crate::metadata::Meta;
+use crate::metadata::{meta::IndexStatus, Meta};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Response {
@@ -11,11 +11,14 @@ pub enum Response {
     Item(Meta),
     List(Vec<Meta>),
     Error(String),
+    NoAdapterFound(String),
     NotFound(String),
     TooManyMeta(String, Vec<Meta>),
     Status(String, Status),
     OpenStatus(String, Status),
-    // Many(Vec<Response>),
+    IndexStatus(String, Option<IndexStatus>),
+    Indexing(String),
+    Many(Vec<Response>),
     Open(PathBuf),
     Unhandled,
     Ok,

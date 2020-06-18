@@ -53,7 +53,7 @@ pub enum Subcommand {
     Delete {
         id: String,
     },
-    /// Download either a single ID or all ids id empty
+    /// Download either a single ID or all ids if empty
     Download {
         // #[structopt(short, long)]
         // all: bool,
@@ -62,8 +62,50 @@ pub enum Subcommand {
     Open {
         id: String,
     },
+    /// Run an ID through the full text search indexing pipeline. Simply write
+    /// an ID after `index` to index that ID.
+    ///
+    /// Example: `monk index t4v`
+    Index {
+        // /// Retrieve the indexing status for the given ID
+        // #[structopt(short, long)]
+        // status: bool,
+        /// Indexing subcommand. Write an ID to simply index that ID.
+        #[structopt(subcommand)]
+        command: IndexSubcommand,
+    },
+    /// Search for metadata based off of the given query
+    ///
+    /// The query grammar is very simplistic. A query is tokenized and an
+    /// "OR" is inserted between tokens. Remove the '`' when writing a query
+    /// on the CLI. Quotes are used for phrase queries. {n}{n}
+    /// 1. `sea whale` for results containing "sea" OR "whale" {n}
+    /// 2. `+sea -whale` for results that must have "sea" and not have "whale" {n}
+    /// 3. `pears AND apples` for a conjunction of the two {n}
+    /// 4. `"Phrase Query"` for "phrase" followed by "query" (use quotes). {n}
+    /// 5. `*` for simply everything.
+    ///
+    /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
+    Search {
+        /// Maximum number of items to return
+        #[structopt(short, long, default_value = "1")]
+        count: usize,
+        /// A properly structured search query
+        query: Vec<String>,
+    },
     /// Shutdown the daemon with no cleanup
     ForceShutdown,
     /// Cleanly shutdown the daemon
     Stop,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, StructOpt)]
+pub enum IndexSubcommand {
+    /// Get the current index status of an ID
+    Status { id: String },
+    /// Index everything
+    All,
+    /// Index the given ID
+    #[structopt(external_subcommand, doc="Index the given ID")]
+    Id(Vec<String>),
 }

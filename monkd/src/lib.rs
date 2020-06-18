@@ -10,29 +10,29 @@ pub mod settings;
 
 use anyhow::Result;
 
+use crate::adapter::{http::HttpAdapter, Adapter, AdapterSlug};
 use crate::daemon::Daemon;
 use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
-use crate::adapter::{http::HttpAdapter, AdapterSlug, Adapter};
 
+use async_channel::{Receiver, Sender};
+use async_lock::Lock;
 use directories_next::ProjectDirs;
+use futures::select;
+use futures::{FutureExt, StreamExt};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::delay_for;
-use futures::{StreamExt, FutureExt};
-use futures::select;
-use async_channel::{Sender, Receiver};
-use async_lock::Lock;
 
 #[tracing::instrument(skip(settings))]
 pub async fn run(settings: Settings) -> Result<()> {
-
     let start_time = Instant::now();
 
-    let (sender, mut http_receiver) = mpsc::channel(100);
-    let (adapter_sender, mut adapter_receiver) = async_channel::bounded(100);
+    let (sender, mut http_receiver) = mpsc::channel(1024);
+    let (adapter_sender, mut adapter_receiver) = async_channel::bounded(1024);
+    let (daemon_sender, mut daemon_receiver) = async_channel::bounded(1024);
     let (shutdown, signal) = oneshot::channel::<()>();
 
     let addr = SocketAddr::new(settings.daemon().address, settings.daemon().port);
@@ -42,15 +42,14 @@ pub async fn run(settings: Settings) -> Result<()> {
 
     let adapters = create_adapters(&settings, adapter_sender);
 
-    let mut daemon = match Daemon::new(&settings, adapters.clone()) {
+    let mut daemon = match Daemon::new(&settings, daemon_sender, adapters.clone()) {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("error creating daemon: {}", e);
             std::process::exit(1);
         }
     };
- 
-    
+
     'main: loop {
         let mut timeout = tokio::time::delay_for(timeout_duration).boxed().fuse();
         let request = select! {
@@ -58,6 +57,9 @@ pub async fn run(settings: Settings) -> Result<()> {
                 Some(a)
             },
             a = adapter_receiver.next().fuse() => {
+                Some(a)
+            },
+            a = daemon_receiver.next().fuse() => {
                 Some(a)
             },
             t = timeout => {
@@ -68,7 +70,7 @@ pub async fn run(settings: Settings) -> Result<()> {
         if let Some(Some((request, response))) = request {
             if let Request::Stop = request {
                 tracing::info!("Stop Request Received");
-                
+
                 // Only send an `Ok` if a response is requested
                 if let Some(response) = response {
                     let _ = response.send(Response::Ok);
@@ -77,11 +79,16 @@ pub async fn run(settings: Settings) -> Result<()> {
                 break 'main;
             }
 
+            tracing::trace!("Recieved request: {:?}", request);
+
             let res = match daemon.handle_request(request).await {
                 r @ Ok(_) => r,
                 Err(e) if e.is_client_error() => Ok(Response::from(e)),
                 Err(e) => Err(e),
             }?;
+
+            tracing::trace!("Processed Result: {:?}", res);
+            tracing::trace!("Result requested: {}", response.is_some());
 
             // Only send the respone if it was requested
             if let Some(response) = response {
@@ -102,7 +109,7 @@ pub async fn run(settings: Settings) -> Result<()> {
     // all adapter messages are finished.
     for adapter in adapters.into_iter() {
         let mut adapter = adapter.lock().await;
-        
+
         if let Err(e) = adapter.shutdown().await {
             tracing::error!("error shuting adapter down: {}", e);
         }
@@ -118,13 +125,12 @@ pub async fn run(settings: Settings) -> Result<()> {
                 Err(e) if e.is_client_error() => Ok(Response::from(e)),
                 Err(e) => Err(e),
             }?;
-    
+
             // Only send the respone if it was requested
             if let Some(response) = response {
                 let _ = response.send(res);
-            } 
+            }
         }
-        
     }
 
     let _ = shutdown.send(());
@@ -153,12 +159,18 @@ pub fn get_dirs() -> Option<ProjectDirs> {
     ProjectDirs::from("io", "darling", "monk")
 }
 
-fn create_adapters(settings: &Settings, sender: Sender<(Request, Option<oneshot::Sender<Response>>)>) -> Vec<Lock<Box<dyn Adapter>>> {
+fn create_adapters(
+    settings: &Settings,
+    sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
+) -> Vec<Lock<Box<dyn Adapter>>> {
     let mut adapters: Vec<Lock<Box<dyn Adapter>>> = Vec::new();
 
     for slug in settings.adapters() {
         match slug {
-            AdapterSlug::Http => adapters.push(Lock::new(Box::new(HttpAdapter::new(settings.offline().path.clone(), sender.clone())))),
+            AdapterSlug::Http => adapters.push(Lock::new(Box::new(HttpAdapter::new(
+                settings.offline().path.clone(),
+                sender.clone(),
+            )))),
         }
     }
 

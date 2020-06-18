@@ -24,7 +24,8 @@ impl Server {
         let route = warp::any()
             .and(sender)
             .and(warp::body::json())
-            .and_then(handle);
+            .and_then(handle)
+            .with(warp::filters::log::log("warp"));
 
         let server = warp::serve(route);
 
@@ -42,7 +43,11 @@ pub async fn handle(
     req: Request,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let (send, resp) = oneshot::channel();
-    sender.send((req, Some(send))).await.map_err(|_| ()).unwrap();
+    sender
+        .send((req, Some(send)))
+        .await
+        .map_err(|_| ())
+        .unwrap();
 
     Ok(match resp.await {
         Ok(r) => json(&r),

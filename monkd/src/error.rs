@@ -31,6 +31,8 @@ pub enum Error {
     TooManyMetas(String, Vec<Meta>),
     #[error("Tantivy Error: {0}")]
     Tantivy(String),
+    #[error("Query Parsing Error: {0}")]
+    QueryParse(String),
     #[error("No url for: `{0}`")]
     NoUrl(String),
     #[error("Reqwest error: {0}")]
@@ -52,5 +54,17 @@ impl Error {
             | Error::NoUrl(_) => true,
             _ => false,
         }
+    }
+}
+
+impl From<tantivy::TantivyError> for Error {
+    fn from(e: tantivy::TantivyError) -> Self {
+        Error::Tantivy(e.to_string())
+    }
+}
+
+impl From<tantivy::query::QueryParserError> for Error {
+    fn from(e: tantivy::query::QueryParserError) -> Self {
+        Error::QueryParse(e.to_string())
     }
 }

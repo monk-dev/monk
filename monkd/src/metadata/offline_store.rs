@@ -218,7 +218,7 @@ impl Status {
             Status::Error(_) => true,
             _ => false,
         }
-    }   
+    }
 }
 
 impl Default for Status {

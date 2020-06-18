@@ -36,3 +36,4 @@ monolith = { path = "../monolith" }
 reqwest = "*"
 directories-next = "*"
 async-trait = "*"
+scraper = "*"
