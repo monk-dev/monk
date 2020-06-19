@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 pub mod http;
 
 use crate::error::Error;
@@ -13,9 +15,7 @@ pub enum AdapterSlug {
 }
 
 #[async_trait]
-pub trait Adapter
-where
-    Self: Send,
+pub trait Adapter: Send
 {
     // /// Initialize an adapter with the provided configuration string. If `None`
     // /// is returned, the `Self::default()` implementation will be used. The provided

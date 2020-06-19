@@ -106,6 +106,6 @@ pub enum IndexSubcommand {
     /// Index everything
     All,
     /// Index the given ID
-    #[structopt(external_subcommand, doc = "Index the given ID")]
+    #[structopt(external_subcommand)]
     Id(Vec<String>),
 }

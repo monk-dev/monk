@@ -195,14 +195,6 @@ impl OfflineData {
     pub fn file(&self) -> Option<&Path> {
         self.file.as_deref()
     }
-
-    // pub fn is_indexed(&self) -> bool {
-    //     self.indexed
-    // }
-
-    // pub fn is_dirty(&self) -> bool {
-    //     self.dirty
-    // }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

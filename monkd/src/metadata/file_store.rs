@@ -200,41 +200,7 @@ impl FileStore {
                 .commit()
                 .map_err(|e| tracing::error!("FileStore: {}", e));
         }
-
-        Ok(())
     }
-
-    // pub async fn read_file(path: impl AsRef<Path>) -> Result<Self> {
-    //     let mut lines = BufReader::new(file).lines();
-
-    //     let mut metadata = Vec::with_capacity(lines.size_hint().0);
-
-    //     while let Some(line) = lines.next().await {
-    //         let data = serde_json::from_str(&line?)?;
-    //         metadata.push(data);
-    //     }
-
-    //     Ok(FileStore {
-    //         metadata
-    //     })
-    // }
-
-    // pub fn write_file(&self, path: impl AsRef<Path>) -> Result<()> {
-    //     use std::fs::File;
-    //     use std::io::{BufWriter, Write};
-
-    //     let file = File::create(path)?;
-    //     let mut writer = BufWriter::new(file);
-
-    //     for data in &self.metadata {
-    //         serde_json::to_writer(&mut writer, data)?;
-    //         writer.write(b"\n")?;
-    //     }
-
-    //     writer.flush()?;
-
-    //     Ok(())
-    // }
 }
 
 impl Drop for FileStore {
