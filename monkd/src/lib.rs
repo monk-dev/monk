@@ -1,5 +1,3 @@
-#![feature(result_flattening, with_options)]
-
 pub mod adapter;
 pub mod daemon;
 pub mod error;

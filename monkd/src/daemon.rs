@@ -130,7 +130,7 @@ impl<'s> Daemon<'s> {
                 tokio::spawn(async move {
                     let mut index = index.write().await;
                     let mut adapter = adapter.lock().await;
-                    
+
                     if let Some(result) = adapter
                         .handle_index(&meta, offline.as_ref(), &mut index)
                         .await
@@ -142,7 +142,6 @@ impl<'s> Daemon<'s> {
                             let _ = daemon_sender.send((Request::UpdateMeta(meta), None)).await;
                         }
                     }
-
                 });
 
                 return Ok(Response::Ok);
@@ -272,7 +271,10 @@ impl<'s> Daemon<'s> {
                 if let Some(path) = &data.file {
                     Ok(Response::Open(path.clone()))
                 } else {
-                    Ok(Response::OpenStatus(data.id().to_string(), data.status.clone()))
+                    Ok(Response::OpenStatus(
+                        data.id().to_string(),
+                        data.status.clone(),
+                    ))
                 }
             }
             Err(_e) => Ok(Response::Error(Error::IdNotFound(id).to_string())),

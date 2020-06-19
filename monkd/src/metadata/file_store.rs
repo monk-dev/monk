@@ -244,7 +244,9 @@ impl Drop for FileStore {
 }
 
 fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
-    let file = File::with_options()
+    use std::fs::OpenOptions;
+
+    let file = OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
