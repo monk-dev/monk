@@ -1,9 +1,13 @@
 image: "rust:latest"
 
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/cargo
+  APT_CACHE_DIR: $CI_PROJECT_DIR/apt
+
 before_script:
+  - apt-get update -yq
+  - apt-get install -o dir::cache::archives="$APT_CACHE_DIR" -y git
   - rustup component add rustfmt
-  - apt-get update -yqq
-  - apt-get install -yqq git
   - git submodule init
   - git submodule update
 
@@ -12,21 +16,26 @@ stages:
   - test
   - build
 
-lint fmt:
+lint:fmt:
   stage: lint
   script:
     - cargo fmt -- --check
 
-test cargo:
+test:cargo:
   stage: test
   script:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo test
 
-build release:
+build:release:
   stage: build
   script:
     - cargo build --release
   only:
     refs:
       - master
+
+cache:
+  paths:
+    - .cargo
+    - target/
