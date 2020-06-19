@@ -13,7 +13,7 @@ use crate::daemon::Daemon;
 use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
 
-use async_channel::{Sender};
+use async_channel::Sender;
 use async_lock::Lock;
 use directories_next::ProjectDirs;
 use futures::select;
@@ -22,7 +22,6 @@ use std::net::SocketAddr;
 
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
-
 
 #[tracing::instrument(skip(settings))]
 pub async fn run(settings: Settings) -> Result<()> {

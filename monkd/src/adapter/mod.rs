@@ -5,7 +5,7 @@ pub mod http;
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{offline_store::OfflineData, Meta};
-use crate::{Response};
+use crate::Response;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -15,8 +15,7 @@ pub enum AdapterSlug {
 }
 
 #[async_trait]
-pub trait Adapter: Send
-{
+pub trait Adapter: Send {
     // /// Initialize an adapter with the provided configuration string. If `None`
     // /// is returned, the `Self::default()` implementation will be used. The provided
     // /// `Sink<Request>` can be used to send more messages to the event loop. This can

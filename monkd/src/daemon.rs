@@ -1,11 +1,7 @@
 use crate::adapter::Adapter;
 use crate::error::Error;
 use crate::index::Index;
-use crate::metadata::{
-    meta::IndexStatus,
-    offline_store::OfflineStore,
-    FileStore, Meta,
-};
+use crate::metadata::{meta::IndexStatus, offline_store::OfflineStore, FileStore, Meta};
 use crate::server::{request::Request, response::Response};
 use crate::settings::Settings;
 
