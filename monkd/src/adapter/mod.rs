@@ -5,7 +5,7 @@ pub mod http;
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{offline_store::OfflineData, Meta};
-use crate::{Request, Response};
+use crate::{Response};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
