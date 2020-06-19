@@ -1,6 +1,6 @@
 use async_channel::Sender;
 use async_trait::async_trait;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,

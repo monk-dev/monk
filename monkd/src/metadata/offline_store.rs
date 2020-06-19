@@ -8,8 +8,6 @@ use url::Url;
 
 use crate::error::Error;
 
-
-
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineStore {
     data: Vec<OfflineData>,
