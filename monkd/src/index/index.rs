@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
-use std::path::Path;
+
+
 use tantivy::{
     collector::TopDocs, directory::*, query::QueryParser, DocAddress, Document, Index as TIndex,
     IndexWriter, Opstamp, Term,

@@ -1,9 +1,9 @@
-use crate::adapter::{http::HttpAdapter, Adapter, AdapterSlug};
+use crate::adapter::Adapter;
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{
     meta::IndexStatus,
-    offline_store::{OfflineData, OfflineStore, Status},
+    offline_store::OfflineStore,
     FileStore, Meta,
 };
 use crate::server::{request::Request, response::Response};
@@ -12,11 +12,10 @@ use crate::settings::Settings;
 use async_channel::Sender;
 use async_lock::Lock;
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::sync::{Mutex, RwLock};
-use tokio::task::JoinHandle;
+use tokio::sync::{RwLock};
+
 use tracing::info;
 
 pub struct Daemon<'s> {

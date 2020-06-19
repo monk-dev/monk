@@ -1,10 +1,8 @@
 use anyhow::Result;
-
-use directories_next::ProjectDirs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use monkd::{get_dirs, settings::Settings};
+use monkd::settings::Settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {

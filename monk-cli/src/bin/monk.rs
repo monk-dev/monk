@@ -1,4 +1,3 @@
-use config::{Config, Environment, File};
 use structopt::StructOpt;
 
 use monk_cli::{args::Args, args::Subcommand, cli::Cli, error::Error};

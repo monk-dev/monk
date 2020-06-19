@@ -7,8 +7,8 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::error::Error;
-use crate::metadata::monolith::download_meta;
-use crate::metadata::Meta;
+
+
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineStore {
@@ -195,14 +195,6 @@ impl OfflineData {
     pub fn file(&self) -> Option<&Path> {
         self.file.as_deref()
     }
-
-    // pub fn is_indexed(&self) -> bool {
-    //     self.indexed
-    // }
-
-    // pub fn is_dirty(&self) -> bool {
-    //     self.dirty
-    // }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

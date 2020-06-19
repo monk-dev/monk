@@ -1,6 +1,6 @@
 use async_channel::Sender;
 use async_trait::async_trait;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -14,7 +14,7 @@ use crate::{
     index::Index,
     metadata::{
         monolith,
-        offline_store::{OfflineData, OfflineStore, Status},
+        offline_store::{OfflineData, Status},
         Meta,
     },
     Request, Response,
