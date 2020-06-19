@@ -104,7 +104,7 @@ impl Adapter for HttpAdapter {
             let meta = meta.clone();
             let semaphore = Arc::clone(&self.in_flight);
             let sender = self.sender.clone();
-            let offline_folder = self.offline_folder.join("offline");
+            let offline_folder = self.offline_folder.clone();
 
             tokio::spawn(async move {
                 semaphore.fetch_add(1, Ordering::SeqCst);
