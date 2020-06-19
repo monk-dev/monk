@@ -166,7 +166,7 @@ fn create_adapters(
     for slug in settings.adapters() {
         match slug {
             AdapterSlug::Http => adapters.push(Lock::new(Box::new(HttpAdapter::new(
-                settings.offline().path.clone(),
+                settings.offline().data_folder.clone(),
                 sender.clone(),
             )))),
         }

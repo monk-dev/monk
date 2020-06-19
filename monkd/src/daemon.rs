@@ -11,10 +11,8 @@ use crate::settings::Settings;
 
 use async_channel::Sender;
 use async_lock::Lock;
-use std::sync::{
-    Arc,
-};
-use tokio::sync::{RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use tracing::info;
 
@@ -36,7 +34,7 @@ impl<'s> Daemon<'s> {
         let store = Arc::new(RwLock::new(FileStore::read_file(&settings.store().path)?));
         let index = Arc::new(RwLock::new(Index::new(&settings.index())?));
         let offline = Arc::new(RwLock::new(OfflineStore::read_file(
-            &settings.offline().path.join("offline.json"),
+            &settings.offline().store_file,
         )?));
 
         let store_clone = store.clone();

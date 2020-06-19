@@ -242,18 +242,25 @@ fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OfflineSettings {
-    pub(crate) path: PathBuf,
+    pub(crate) data_folder: PathBuf,
+    pub(crate) store_file: PathBuf,
 }
 
 impl Default for OfflineSettings {
     fn default() -> Self {
         if let Some(dirs) = crate::get_dirs() {
+            let data_dir = dirs.data_dir();
+            let data_folder = data_dir.join("offline");
+            let store_file = data_dir.join("offline.json");
+
             OfflineSettings {
-                path: dirs.data_dir().into(),
+                data_folder,
+                store_file,
             }
         } else {
             OfflineSettings {
-                path: "./offline".into(),
+                data_folder: "./offline".into(),
+                store_file: "offline.json".into(),
             }
         }
     }
