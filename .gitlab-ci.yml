@@ -1,0 +1,32 @@
+image: "rust:latest"
+
+before_script:
+  - rustup component add rustfmt
+  - apt-get update -yqq
+  - apt-get install -yqq git
+  - git submodule init
+  - git submodule update
+
+stages:
+  - lint
+  - test
+  - build
+
+lint fmt:
+  stage: lint
+  script:
+    - cargo fmt -- --check
+
+test cargo:
+  stage: test
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo test
+
+build release:
+  stage: build
+  script:
+    - cargo build --release
+  only:
+    refs:
+      - master
