@@ -35,9 +35,9 @@ build:release:
     paths:
       - target/release/monk
       - target/release/monkd
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 package:deb:
   stage: package
@@ -49,9 +49,9 @@ package:deb:
   artifacts:
     paths:
       - target/debian
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 verify:deb:
   image: "ubuntu:latest"
@@ -63,9 +63,9 @@ verify:deb:
   script:
     - "dpkg -i target/debian/monk*.deb"
     - monk config
-  # only:
-  #   refs:
-  #     - master
+  only:
+    refs:
+      - master
 
 cache:
   paths:
