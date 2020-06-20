@@ -3,13 +3,10 @@ image: "rust:latest"
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
+  GIT_SUBMODULE_STRATEGY: recursive
 
 before_script:
-  - apt-get update -yq
-  - apt-get install -o dir::cache::archives="$APT_CACHE_DIR" -y git
   - rustup component add rustfmt
-  - git submodule init
-  - git submodule update
 
 stages:
   - lint
