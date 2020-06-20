@@ -31,7 +31,8 @@ build:release:
     - cargo build --release
   artifacts:
     paths:
-      - target/release
+      - target/release/monk
+      - target/release/monkd
   # only:
   #   refs:
   #     - master
