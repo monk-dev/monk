@@ -13,6 +13,7 @@ stages:
   - test
   - build
   - package
+  - verify
 
 lint:fmt:
   stage: lint
@@ -47,6 +48,20 @@ package:deb:
   artifacts:
     paths:
       - target/debian
+  # only:
+  #   refs:
+  #     - master
+
+verify:deb:
+  image: "ubuntu:latest"
+  stage: verify
+  before_script:
+    - apt update
+    - apt install -y libssl-dev
+  script:
+    - dpkg -i target/debian/monkd_0.1.0_amd64.deb
+    - dpkg -i target/debian/monkd_0.1.0_amd64.deb
+    - monk config
   # only:
   #   refs:
   #     - master
