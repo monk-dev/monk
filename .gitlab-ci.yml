@@ -12,6 +12,7 @@ stages:
   - lint
   - test
   - build
+  - package
 
 lint:fmt:
   stage: lint
@@ -28,9 +29,26 @@ build:release:
   stage: build
   script:
     - cargo build --release
-  only:
-    refs:
-      - master
+  artifacts:
+    paths:
+      - target/release
+  # only:
+  #   refs:
+  #     - master
+
+package:deb:
+  stage: package
+  before_script:
+    - cargo install cargo-deb
+  script:
+    - cargo deb -p monk-cli
+    - cargo deb -p monkd
+  artifacts:
+    paths:
+      - target/debian
+  # only:
+  #   refs:
+  #     - master
 
 cache:
   paths:
