@@ -1,7 +1,7 @@
 image: "rust:latest"
 
 variables:
-  CARGO_HOME: $CI_PROJECT_DIR/cargo
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
   GIT_SUBMODULE_STRATEGY: recursive
 
