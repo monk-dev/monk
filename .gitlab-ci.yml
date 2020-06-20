@@ -41,6 +41,7 @@ build:release:
 
 package:deb:
   stage: package
+  cache: {}
   before_script:
     - cargo install cargo-deb
   script:
