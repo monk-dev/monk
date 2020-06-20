@@ -10,7 +10,7 @@ license = "MIT"
 maintainer = "Fisher Darling <fdarling@mines.edu>"
 copyright = "2020, Fisher Darling <fdarling@mines.edu>"
 extended-description-file = "README.md"
-depends = "$auto, libssl>=1.0"
+depends = "$auto, libssl-dev"
 section = "utility"
 priority = "optional"
 assets = [

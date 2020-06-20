@@ -10,12 +10,11 @@ license = "NONE"
 maintainer = "Fisher Darling <fdarling@mines.edu>"
 copyright = "2020, Fisher Darling <fdarling@mines.edu>"
 extended-description-file = "README.md"
-depends = "$auto, libssl>=1.0"
+depends = "$auto, libssl-dev"
 section = "utility"
 priority = "optional"
 assets = [
-    ["../target/release/monk", "usr/bin/", "755"],
-    ["../README.md", "usr/share/doc/monk/README", "644"],
+    ["../target/release/monkd", "usr/bin/", "755"],
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
