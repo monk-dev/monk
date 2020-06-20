@@ -3,6 +3,20 @@ name = "monk-cli"
 version = "0.1.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>"]
 edition = "2018"
+description = ""
+license = "MIT"
+
+[package.metadata.deb]
+maintainer = "Fisher Darling <fdarling@mines.edu>"
+copyright = "2020, Fisher Darling <fdarling@mines.edu>"
+extended-description-file = "README.md"
+depends = "$auto, libssl>=1.0"
+section = "utility"
+priority = "optional"
+assets = [
+    ["../target/release/monk", "usr/bin/", "755"],
+    ["../README.md", "usr/share/doc/monk/README", "644"],
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
