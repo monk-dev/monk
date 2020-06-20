@@ -17,6 +17,7 @@ stages:
 
 lint:fmt:
   stage: lint
+  cache: {}
   script:
     - cargo fmt -- --check
 
@@ -59,8 +60,7 @@ verify:deb:
     - apt update
     - apt install -y libssl-dev
   script:
-    - dpkg -i target/debian/monkd_0.1.0_amd64.deb
-    - dpkg -i target/debian/monkd_0.1.0_amd64.deb
+    - "dpkg -i target/debian/monk*.deb"
     - monk config
   # only:
   #   refs:
