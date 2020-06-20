@@ -1,7 +1,7 @@
 image: "rust:latest"
 
 variables:
-  CARGO_HOME: $CI_PROJECT_DIR/cargo
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
   GIT_SUBMODULE_STRATEGY: recursive
 
@@ -12,9 +12,12 @@ stages:
   - lint
   - test
   - build
+  - package
+  - verify
 
 lint:fmt:
   stage: lint
+  cache: {}
   script:
     - cargo fmt -- --check
 
@@ -28,9 +31,41 @@ build:release:
   stage: build
   script:
     - cargo build --release
-  only:
-    refs:
-      - master
+  artifacts:
+    paths:
+      - target/release/monk
+      - target/release/monkd
+  # only:
+  #   refs:
+  #     - master
+
+package:deb:
+  stage: package
+  before_script:
+    - cargo install cargo-deb
+  script:
+    - cargo deb -p monk-cli
+    - cargo deb -p monkd
+  artifacts:
+    paths:
+      - target/debian
+  # only:
+  #   refs:
+  #     - master
+
+verify:deb:
+  image: "ubuntu:latest"
+  cache: {}
+  stage: verify
+  before_script:
+    - apt update
+    - apt install -y libssl-dev
+  script:
+    - "dpkg -i target/debian/monk*.deb"
+    - monk config
+  # only:
+  #   refs:
+  #     - master
 
 cache:
   paths:
