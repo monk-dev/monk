@@ -15,7 +15,7 @@ use tracing::{info, instrument};
 use super::Meta;
 use crate::error::Error;
 
-pub const CURRENT_FILE_STORE_VERSION: &'static str = "0.0.0";
+pub const CURRENT_FILE_STORE_VERSION: &'static str = "0.1.0";
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct FileStore {
@@ -45,6 +45,10 @@ impl FileStore {
 
     pub fn file(&self) -> &Path {
         &self.file
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
     }
 
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
@@ -221,7 +225,8 @@ fn check_path(path: impl AsRef<Path>) -> Result<(), Error> {
     file.sync_all()?;
 
     if file.metadata()?.len() == 0 {
-        let default_store = FileStore::default();
+        let mut default_store = FileStore::default();
+        default_store.version = CURRENT_FILE_STORE_VERSION.to_string();
         default_store.write_file(path)?;
     }
 

@@ -5,6 +5,7 @@ pub mod index;
 pub mod metadata;
 pub mod server;
 pub mod settings;
+pub mod status;
 
 use anyhow::Result;
 

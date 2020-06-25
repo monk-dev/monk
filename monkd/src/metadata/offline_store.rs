@@ -20,6 +20,10 @@ impl OfflineStore {
         &self.file
     }
 
+    pub fn data(&self) -> &[OfflineData] {
+        &self.data
+    }
+
     fn push(&mut self, data: OfflineData) -> Result<(), Error> {
         self.dirty = true;
 

@@ -90,7 +90,10 @@ impl Adapter for HttpAdapter {
 
             if let Some(ref offline) = offline {
                 if offline.status == Status::Ready {
-                    return Some(Ok(Response::Status(meta.id().to_string(), Status::Ready)));
+                    return Some(Ok(Response::MetaOfflineStatus(
+                        meta.id().to_string(),
+                        Status::Ready,
+                    )));
                 }
             }
 

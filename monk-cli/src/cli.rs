@@ -1,3 +1,4 @@
+use colored::*;
 use std::net::SocketAddr;
 use term_table::{
     row::Row,
@@ -6,12 +7,16 @@ use term_table::{
 };
 use url::Url;
 
-use crate::args::{Args, IndexSubcommand, Subcommand};
+use crate::args::{Args, IndexSubcommand, StatusRequestKind, Subcommand};
 use crate::error::Error;
 
 use monkd::metadata::Meta;
-use monkd::server::{request::Request, response::Response};
+use monkd::server::{
+    request::{Request, StatusKind},
+    response::Response,
+};
 use monkd::settings::Settings;
+use monkd::status::StatusResponse;
 
 pub struct Cli;
 
@@ -55,6 +60,23 @@ impl Cli {
                 IndexSubcommand::Status { id } => Request::IndexStatus { id },
                 IndexSubcommand::Id(id) => Request::Index { id: id[0].clone() },
                 IndexSubcommand::All => Request::IndexAll,
+            },
+            Subcommand::Status { kind } => match kind {
+                StatusRequestKind::All => Request::Status {
+                    kind: StatusKind::All,
+                },
+                StatusRequestKind::Index => Request::Status {
+                    kind: StatusKind::Index,
+                },
+                StatusRequestKind::Offline => Request::Status {
+                    kind: StatusKind::Offline,
+                },
+                StatusRequestKind::Store => Request::Status {
+                    kind: StatusKind::Store,
+                },
+                StatusRequestKind::Id(ids) => Request::Status {
+                    kind: StatusKind::Id(ids[0].clone()),
+                },
             },
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
@@ -104,7 +126,7 @@ pub fn handle_response(response: Response) {
         Response::NoAdapterFound(id) => {
             println!("An adapter that could handle `{}` could not be found.", id);
         }
-        Response::Status(id, status) => {
+        Response::MetaOfflineStatus(id, status) => {
             println!("Status for `{}`: {:?}", id, status);
         }
         Response::IndexStatus(id, status) => {
@@ -132,6 +154,9 @@ pub fn handle_response(response: Response) {
             for response in responses {
                 handle_response(response);
             }
+        }
+        Response::Status(status) => {
+            print_status(status);
         }
         Response::Ok => {}
         Response::Error(e) => {
@@ -234,6 +259,72 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
     }
 
     table
+}
+
+fn print_status(status: StatusResponse) {
+    if let Some(file_store) = status.file_store {
+        println!("{} [{}]:", "File Store".bold(), file_store.version.yellow());
+        println!(
+            "  {}",
+            get_byte_unit(file_store.bytes_on_disk).to_string().green()
+        );
+        println!("  {} {}", file_store.item_count, "item(s)".blue());
+
+        if status.offline_store.is_some() || status.index_status.is_some() {
+            println!();
+        }
+    }
+
+    if let Some(offline_store) = status.offline_store {
+        println!("{}:", "Offline Store".bold());
+        println!(
+            "  {}",
+            get_byte_unit(offline_store.bytes_on_disk)
+                .to_string()
+                .green()
+        );
+        println!("  {} {}", offline_store.item_count, "item(s)".blue());
+
+        if status.index_status.is_some() {
+            println!();
+        }
+    }
+
+    if let Some(index) = status.index_status {
+        println!("{}:", "Search Index".bold());
+        println!(
+            "  {}",
+            get_byte_unit(index.bytes_on_disk).to_string().green()
+        );
+        println!("  {} {}", index.item_count, "item(s)".blue());
+    }
+
+    if let Some(meta) = status.meta {
+        println!("[{}]:", meta.id.purple());
+        println!(
+            "size:     {}",
+            get_byte_unit(meta.bytes_on_disk).to_string().green()
+        );
+        println!(
+            "index:    {}",
+            meta.index_status
+                .map(|s| format!("{:?}", s))
+                .unwrap_or_else(|| "Not downloaded".to_string())
+        );
+        println!(
+            "offline:  {}",
+            meta.offline_status
+                .map(|s| format!("{:?}", s))
+                .unwrap_or_else(|| "Not indexed".to_string())
+        );
+    }
+}
+
+fn get_byte_unit(bytes: usize) -> byte_unit::AdjustedByte {
+    let byte = byte_unit::Byte::from_bytes(bytes as u128);
+    let adjusted = byte.get_appropriate_unit(false);
+
+    adjusted
 }
 
 pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {

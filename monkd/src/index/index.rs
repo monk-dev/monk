@@ -1,3 +1,4 @@
+use std::path::{Path, PathBuf};
 use tantivy::{
     collector::TopDocs, directory::*, query::QueryParser, DocAddress, Document, Index as TIndex,
     IndexWriter, Opstamp, Term,
@@ -10,6 +11,7 @@ use crate::metadata::Meta;
 
 pub struct Index {
     index: TIndex,
+    folder: PathBuf,
     writer: IndexWriter,
 }
 
@@ -28,7 +30,28 @@ impl Index {
             .writer(50_000_000)
             .map_err(|e| Error::Tantivy(e.to_string()))?;
 
-        Ok(Index { index, writer })
+        Ok(Index {
+            index,
+            folder: settings.path.clone(),
+            writer,
+        })
+    }
+
+    pub fn folder(&self) -> &Path {
+        &self.folder
+    }
+
+    pub fn count_indexed_items(&self) -> Result<usize, Error> {
+        use tantivy::collector::Count;
+
+        let reader = self.index.reader()?;
+        let searcher = reader.searcher();
+
+        let query_parser = QueryParser::for_index(&self.index, vec![ID]);
+        let query = query_parser.parse_query("*")?;
+        let count = searcher.search(&query, &Count)?;
+
+        Ok(count)
     }
 
     pub fn search(&self, query: String, count: usize) -> Result<Vec<String>, Error> {
