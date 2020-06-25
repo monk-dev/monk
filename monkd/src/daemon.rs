@@ -1,7 +1,11 @@
 use crate::adapter::Adapter;
 use crate::error::Error;
 use crate::index::Index;
-use crate::metadata::{meta::IndexStatus, offline_store::OfflineStore, FileStore, Meta};
+use crate::metadata::{
+    meta::IndexStatus,
+    offline_store::{OfflineStore, Status as OfflineStatus},
+    FileStore, Meta,
+};
 use crate::server::{
     request::{Request, StatusKind},
     response::Response,
@@ -14,7 +18,7 @@ use async_lock::Lock;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use tracing::info;
+use tracing::{error, info};
 
 pub struct Daemon<'s> {
     store: Arc<RwLock<FileStore>>,
@@ -121,7 +125,10 @@ impl<'s> Daemon<'s> {
             StatusKind::Id(id) => {
                 let store = self.store.read().await;
                 let offline = self.offline.read().await;
-                let meta = store.get(&id)?;
+                let meta = match store.get(&id) {
+                    Err(_) => return Ok(Response::NotFound(id)),
+                    Ok(m) => m,
+                };
 
                 let meta_status = MetaStatus::new(&meta, &offline)?;
 
@@ -132,7 +139,6 @@ impl<'s> Daemon<'s> {
                     index_status: None,
                 }))
             }
-            _ => panic!(),
         }
     }
 
@@ -158,19 +164,35 @@ impl<'s> Daemon<'s> {
         }
 
         let meta = builder.build();
+        let mut _adapter_result = None;
 
         for adapter in &self.adapters {
             let mut adapter = adapter.lock().await;
 
             if let Some(res) = adapter.handle_add(&meta).await {
-                return res;
+                _adapter_result = Some(res);
+                break;
             }
+        }
+
+        if self.settings.daemon().download_after_add {
+            info!("auto downloading: [{}]", meta.id());
+
+            let download_req = Request::Download {
+                id: Some(meta.id().to_string()),
+            };
+
+            let _ = self
+                .daemon_sender
+                .send((download_req, None))
+                .await
+                .map_err(|_| error!("error automatically downloading [{}]", meta.id()));
         }
 
         // TODO: Use `Response::Many` for these errors
         // e.g. We still want to add to store even if
         // indexing fails.
-        self.index.write().await.insert_meta(&meta)?;
+        let _ = self.index.write().await.insert_meta(&meta);
 
         self.store
             .write()
@@ -269,14 +291,45 @@ impl<'s> Daemon<'s> {
                     return resp;
                 }
             }
-        }
 
-        // No adapter capable of handling the download
-        Ok(Response::Unhandled)
+            Ok(Response::Unhandled)
+        } else {
+            let offline_store = self.offline.read().await;
+
+            // Download everything in the store:
+            let ids: Vec<String> = self
+                .store
+                .read()
+                .await
+                .data()
+                .iter()
+                .filter(|m| offline_store.get(m.id()).is_err())
+                .map(|d| d.id().to_string())
+                .collect();
+
+            let count = ids.len();
+
+            for id in ids {
+                let req = Request::Download { id: Some(id) };
+                let _ = self
+                    .daemon_sender
+                    .send((req, None))
+                    .await
+                    .map_err(|_| error!("error sending download req"));
+            }
+
+            match count {
+                0 => Ok(Response::Custom(format!("no items to download"))),
+                1 => Ok(Response::Custom(format!("downloading 1 item"))),
+                count => Ok(Response::Custom(format!("downloading {} items", count))),
+            }
+        }
     }
 
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
         info!("[delete] {:?}", id);
+        let id = { self.store.read().await.get(id)?.id().to_string() };
+
         let _ = self.offline.write().await.delete(&id);
         let _ = self.index.write().await.delete(&id);
 
@@ -347,7 +400,25 @@ impl<'s> Daemon<'s> {
                     ))
                 }
             }
-            Err(_e) => Ok(Response::Error(Error::IdNotFound(id).to_string())),
+            Err(_e) => {
+                if self.settings.daemon().download_on_open {
+                    let req = Request::Download {
+                        id: Some(id.to_string()),
+                    };
+                    let _ = self
+                        .daemon_sender
+                        .send((req, None))
+                        .await
+                        .map_err(|_| error!("error sending download req"));
+
+                    Ok(Response::MetaOfflineStatus(
+                        id.to_string(),
+                        OfflineStatus::Downloading,
+                    ))
+                } else {
+                    Ok(Response::NotFound(id.to_string()))
+                }
+            }
         }
     }
 

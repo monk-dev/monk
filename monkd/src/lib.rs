@@ -17,30 +17,27 @@ use crate::settings::Settings;
 use async_channel::Sender;
 use async_lock::Lock;
 use directories_next::ProjectDirs;
-use futures::select;
-use futures::{FutureExt, StreamExt};
 use std::net::SocketAddr;
+use tokio::time::timeout;
 
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 
 #[tracing::instrument(skip(settings))]
 pub async fn run(settings: Settings) -> Result<()> {
     let start_time = Instant::now();
 
-    let (sender, mut http_receiver) = mpsc::channel(1024);
-    let (adapter_sender, mut adapter_receiver) = async_channel::bounded(1024);
-    let (daemon_sender, mut daemon_receiver) = async_channel::bounded(1024);
+    let (sender, receiver) = async_channel::unbounded();
     let (shutdown, signal) = oneshot::channel::<()>();
 
     let addr = SocketAddr::new(settings.daemon().address, settings.daemon().port);
 
-    tokio::spawn(Server::spawn(addr, sender, signal));
+    tokio::spawn(Server::spawn(addr, sender.clone(), signal));
     let timeout_duration = Duration::from_millis(settings.daemon().timeout as u64);
 
-    let adapters = create_adapters(&settings, adapter_sender);
+    let adapters = create_adapters(&settings, sender.clone());
 
-    let mut daemon = match Daemon::new(&settings, daemon_sender, adapters.clone()) {
+    let mut daemon = match Daemon::new(&settings, sender.clone(), adapters.clone()) {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("error creating daemon: {}", e);
@@ -49,23 +46,12 @@ pub async fn run(settings: Settings) -> Result<()> {
     };
 
     'main: loop {
-        let mut timeout = tokio::time::delay_for(timeout_duration).boxed().fuse();
-        let request = select! {
-            a = http_receiver.next().fuse() => {
-                Some(a)
-            },
-            a = adapter_receiver.next().fuse() => {
-                Some(a)
-            },
-            a = daemon_receiver.next().fuse() => {
-                Some(a)
-            },
-            t = timeout => {
-                None
-            }
-        };
+        // let mut timeout = tokio::time::delay_for(timeout_duration).boxed().fuse();
+        let request_future = timeout(timeout_duration, receiver.recv());
 
-        if let Some(Some((request, response))) = request {
+        if let Ok(request) = request_future.await {
+            let (request, response) = request?;
+
             if let Request::Stop = request {
                 tracing::info!("Stop Request Received");
 
@@ -114,10 +100,10 @@ pub async fn run(settings: Settings) -> Result<()> {
     }
 
     tracing::info!("Handling remaing messages");
-    tracing::info!("{} adapter messages left", adapter_receiver.len());
+    tracing::info!("{} adapter messages left", receiver.len());
 
-    while !adapter_receiver.is_empty() {
-        if let Ok((request, response)) = adapter_receiver.recv().await {
+    while !receiver.is_empty() {
+        if let Ok((request, response)) = receiver.recv().await {
             let res = match daemon.handle_request(request).await {
                 r @ Ok(_) => r,
                 Err(e) if e.is_client_error() => Ok(Response::from(e)),
@@ -154,7 +140,7 @@ pub fn generate_id() -> String {
 }
 
 pub fn get_dirs() -> Option<ProjectDirs> {
-    ProjectDirs::from("io", "darling", "monk")
+    ProjectDirs::from("", "", "monk")
 }
 
 fn create_adapters(
