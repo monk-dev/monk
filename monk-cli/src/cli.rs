@@ -147,7 +147,7 @@ pub fn handle_response(response: Response) {
         Response::IndexStatus(id, status) => {
             println!(
                 "[{}] {}",
-                id,
+                id.to_string().bright_purple(),
                 status
                     .map(|s| format!("{:?}", s))
                     .unwrap_or_else(|| "not indexed".into())

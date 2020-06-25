@@ -29,12 +29,11 @@ $ monk add "AF_XDP" -u https://lwn.net/Articles/750845/ -c "Cool article about f
 ╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
 │   name  │                url                │                 comment                │      date     │      id     │
 ├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
-│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  May 29, 2020 │  njrjdlbd19 │
+│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
 │         │                                   │ ng, pretty pictures!                   │               │             │
 ╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
-$ monk download njrj
-$ monk open njrj
-`njrj` cannot be opened, status: Downloading
+$ monk open ls7d2
+status for [ls7d2]: Downloading
 $ monk open njrj
 ```
 IDs only need to uniquely identify a single item. In this case, a single `n` will work.
@@ -52,27 +51,31 @@ $ monk search packet
 ╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
 │   name  │                url                │                 comment                │      date     │      id     │
 ├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
-│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  May 29, 2020 │  njrjdlbd19 │
+│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
 │         │                                   │ ng, pretty pictures!                   │               │             │
 ╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
 ```
 
 To search across the article's _contents_, the article must first be downloaded and then manually indexed.
 ```
-$ monk download njrj
-$ monk open njrj     # test to see if it's fully downloaded (this will be improved)
-$ monk index njrj    # begin processing the contents
-$ monk index status njrj
+$ monk download ls7d
+$ monk status ls7d
+[ls7d2ypeks]:
+size:     234 B
+index:    not indexed
+offline:  Ready
+$ monk index ls7d    # begin processing the contents
+$ monk index status ls7d
 [njrjdlbd19] Indexing
-$ monk index status njrj
-[njrjdlbd19] Indexed # at this point content can now be searched
+$ monk index status ls7d
+[njrjdlbd19] Indexed # at this point contents can now be searched
 $ monk search processing bpf interface
-╭─────────┬───          ───┬─────────────╮
-│   name  │                │      id     │
-├─────────┼───   ...    ───┼─────────────┤
-│ AF_XDP  │ ht          20 │  njrjdlbd19 │
-│         │                │             │
-╰─────────┴───          ───┴─────────────╯
+╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
+│   name  │                url                │                 comment                │      date     │      id     │
+├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
+│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
+│         │                                   │ ng, pretty pictures!                   │               │             │
+╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
 ```
 
 To simply index everything that's capable of being indexed:
@@ -92,6 +95,32 @@ This removes metadata, offline data, and any indexed data.
 ### Listing all saved articles
 ```
 $ monk list
+```
+
+### Status
+
+Get the status of and disk space of the different parts of `monkd`:
+```
+$ monk status all
+File Store [0.1.0]:
+  586 B
+  2 item(s)
+
+Offline Store:
+  1.07 KB
+  2 item(s)
+
+Search Index:
+  16.75 KB
+  2 item(s)
+```
+Status of an individual item:
+```
+$ monk status ls7d
+[ls7d2ypeks]:
+size:     239 B
+index:    Indexed
+offline:  Ready
 ```
 
 ### Stopping the daemon
