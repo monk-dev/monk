@@ -93,6 +93,13 @@ pub enum Subcommand {
         /// A properly structured search query
         query: Vec<String>,
     },
+    /// Get the status of various parts of the daemon. Simply write
+    /// an ID rather than a subcommand to get the status of that ID.
+    Status {
+        /// The type of status to retreive.
+        #[structopt(subcommand)]
+        kind: StatusRequestKind,
+    },
     /// Shutdown the daemon with no cleanup
     ForceShutdown,
     /// Cleanly shutdown the daemon
@@ -106,6 +113,20 @@ pub enum IndexSubcommand {
     /// Index everything
     All,
     /// Index the given ID
+    #[structopt(external_subcommand)]
+    Id(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, StructOpt)]
+pub enum StatusRequestKind {
+    /// Get the status of the meta store, offline store, and search index.
+    All,
+    /// Get the status of the search index.
+    Index,
+    /// Get the status of meta store.
+    Store,
+    /// Get the status of offline store.
+    Offline,
     #[structopt(external_subcommand)]
     Id(Vec<String>),
 }

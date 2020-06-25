@@ -36,10 +36,22 @@ pub enum Request {
     IndexStatus {
         id: String,
     },
+    Status {
+        kind: StatusKind,
+    },
     ForceShutdown,
     Stop,
     #[serde(skip)]
     UpdateOffline(OfflineData),
     #[serde(skip)]
     UpdateMeta(Meta),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum StatusKind {
+    All,
+    Index,
+    Store,
+    Offline,
+    Id(String),
 }

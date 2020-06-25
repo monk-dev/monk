@@ -2,8 +2,12 @@ use crate::adapter::Adapter;
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{meta::IndexStatus, offline_store::OfflineStore, FileStore, Meta};
-use crate::server::{request::Request, response::Response};
+use crate::server::{
+    request::{Request, StatusKind},
+    response::Response,
+};
 use crate::settings::Settings;
+use crate::status::*;
 
 use async_channel::Sender;
 use async_lock::Lock;
@@ -57,6 +61,79 @@ impl<'s> Daemon<'s> {
 
     pub fn offline_handle(&self) -> Arc<RwLock<OfflineStore>> {
         Arc::clone(&self.offline)
+    }
+
+    pub async fn handle_status(&self, kind: StatusKind) -> Result<Response, Error> {
+        tracing::info!("[status] {:?}", kind);
+
+        match kind {
+            StatusKind::All => {
+                let file_store = self.store.read().await;
+                let offline_store = self.offline.read().await;
+                let index = self.index.read().await;
+
+                let file_store_status = FileStoreStatus::new(&file_store)?;
+                let offline_status = OfflineStoreStatus::new(&offline_store)?;
+                let index_status = TIndexStatus::new(&index)?;
+
+                let status = StatusResponse {
+                    meta: None,
+                    file_store: Some(file_store_status),
+                    offline_store: Some(offline_status),
+                    index_status: Some(index_status),
+                };
+
+                Ok(Response::Status(status))
+            }
+            StatusKind::Index => {
+                let index = self.index.read().await;
+                let index_status = TIndexStatus::new(&index)?;
+
+                Ok(Response::Status(StatusResponse {
+                    meta: None,
+                    file_store: None,
+                    offline_store: None,
+                    index_status: Some(index_status),
+                }))
+            }
+            StatusKind::Offline => {
+                let offline = self.offline.read().await;
+                let offline_status = OfflineStoreStatus::new(&offline)?;
+
+                Ok(Response::Status(StatusResponse {
+                    meta: None,
+                    file_store: None,
+                    offline_store: Some(offline_status),
+                    index_status: None,
+                }))
+            }
+            StatusKind::Store => {
+                let store = self.store.read().await;
+                let store_status = FileStoreStatus::new(&store)?;
+
+                Ok(Response::Status(StatusResponse {
+                    meta: None,
+                    file_store: Some(store_status),
+                    offline_store: None,
+                    index_status: None,
+                }))
+            }
+            StatusKind::Id(id) => {
+                let store = self.store.read().await;
+                let offline = self.offline.read().await;
+                let meta = store.get(&id)?;
+
+                let meta_status = MetaStatus::new(&meta, &offline)?;
+
+                Ok(Response::Status(StatusResponse {
+                    meta: Some(meta_status),
+                    file_store: None,
+                    offline_store: None,
+                    index_status: None,
+                }))
+            }
+            _ => panic!(),
+        }
     }
 
     pub async fn handle_add(
@@ -295,6 +372,7 @@ impl<'s> Daemon<'s> {
             Request::Index { id } => self.handle_index(id).await,
             Request::IndexStatus { id } => self.handle_index_status(id).await,
             Request::IndexAll => self.handle_index_all().await,
+            Request::Status { kind } => self.handle_status(kind).await,
             Request::Search { count, query } => self.handle_search(query, count).await,
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);

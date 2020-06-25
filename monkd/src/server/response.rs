@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::error::Error;
-use crate::metadata::offline_store::Status;
+use crate::metadata::offline_store::Status as OfflineStatus;
 use crate::metadata::{meta::IndexStatus, Meta};
+use crate::status::StatusResponse;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Response {
@@ -14,10 +15,11 @@ pub enum Response {
     NoAdapterFound(String),
     NotFound(String),
     TooManyMeta(String, Vec<Meta>),
-    Status(String, Status),
-    OpenStatus(String, Status),
+    MetaOfflineStatus(String, OfflineStatus),
+    OpenStatus(String, OfflineStatus),
     IndexStatus(String, Option<IndexStatus>),
     Indexing(String),
+    Status(StatusResponse),
     Many(Vec<Response>),
     Open(PathBuf),
     Unhandled,
