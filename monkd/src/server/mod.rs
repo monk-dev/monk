@@ -6,7 +6,7 @@ use self::response::Response;
 
 use std::net::SocketAddr;
 
-use tokio::sync::mpsc::Sender;
+use async_channel::Sender;
 use tokio::sync::oneshot;
 
 use warp::{reply::json, Filter};
@@ -39,7 +39,7 @@ impl Server {
 
 #[tracing::instrument]
 pub async fn handle(
-    mut sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
+    sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
     req: Request,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let (send, resp) = oneshot::channel();

@@ -125,15 +125,9 @@ pub struct DaemonSettings {
     pub address: IpAddr,
     pub port: u16,
     pub timeout: usize,
+    pub download_after_add: bool,
+    pub download_on_open: bool,
 }
-
-// fn default_store() -> PathBuf {
-//     PathBuf::from("./store.json")
-// }
-
-// fn default_offline() -> PathBuf {
-//     PathBuf::from("./offline.json")
-// }
 
 impl Default for DaemonSettings {
     fn default() -> Self {
@@ -141,6 +135,8 @@ impl Default for DaemonSettings {
             address: "127.0.0.1".parse().unwrap(),
             port: 41562,
             timeout: 10000,
+            download_after_add: true,
+            download_on_open: true,
         }
     }
 }

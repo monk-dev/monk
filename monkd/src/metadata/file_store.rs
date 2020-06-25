@@ -209,7 +209,7 @@ impl FileStore {
 
 impl Drop for FileStore {
     fn drop(&mut self) {
-        self.commit().unwrap();
+        let _ = self.commit();
     }
 }
 

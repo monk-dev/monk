@@ -12,6 +12,7 @@ pub enum Response {
     Item(Meta),
     List(Vec<Meta>),
     Error(String),
+    Custom(String),
     NoAdapterFound(String),
     NotFound(String),
     TooManyMeta(String, Vec<Meta>),

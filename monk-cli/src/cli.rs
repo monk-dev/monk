@@ -24,7 +24,7 @@ impl Cli {
     pub async fn run(settings: Settings, args: Args) -> Result<(), Error> {
         check_or_spawn(&settings).await?;
 
-        let request = match args.subcommand {
+        let request = match args.subcommand.clone() {
             Subcommand::Config { file } => {
                 let config = Settings::get_settings(file).unwrap();
                 println!("{}", serde_yaml::to_string(&config).unwrap());
@@ -81,7 +81,7 @@ impl Cli {
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
             Subcommand::Download { id } => Request::Download { id },
-            Subcommand::Open { id } => Request::Open { id },
+            Subcommand::Open { id, .. } => Request::Open { id },
         };
 
         let socket = SocketAddr::new(settings.daemon().address, settings.daemon().port);
@@ -89,7 +89,7 @@ impl Cli {
         let url = reqwest::Url::parse(&socket_url)?;
 
         let response: Response = reqwest::Client::new()
-            .get(url)
+            .get(url.clone())
             .json(&request)
             .send()
             .await?
@@ -111,23 +111,38 @@ pub fn handle_response(response: Response) {
             items.sort_by_key(|i| *i.found());
 
             if items.is_empty() {
-                println!("no items returned");
+                println!("monk's store is empty");
+                println!(
+                    "use {} to add a new item",
+                    "monk add [-n <name>] -u <url>".yellow(),
+                )
             } else {
                 print_tabled(items);
             }
         }
         Response::TooManyMeta(id, metas) => print_too_many(id, metas),
         Response::NewId(id) => {
-            println!("[{}] created", id);
+            println!("[{}] created", id.to_string().bright_purple());
         }
         Response::NotFound(id) => {
-            println!("[{}] not found", id);
+            println!("[{}] not found", id.to_string().bright_purple());
+            println!(
+                "{} to list all items and IDs in the store",
+                "monk list".yellow()
+            );
         }
         Response::NoAdapterFound(id) => {
-            println!("An adapter that could handle `{}` could not be found.", id);
+            println!(
+                "An adapter that could handle [{}] could not be found.",
+                id.to_string().bright_purple()
+            );
         }
         Response::MetaOfflineStatus(id, status) => {
-            println!("Status for `{}`: {:?}", id, status);
+            println!(
+                "status for [{}]: {:?}",
+                id.to_string().bright_purple(),
+                status
+            );
         }
         Response::IndexStatus(id, status) => {
             println!(
@@ -139,16 +154,20 @@ pub fn handle_response(response: Response) {
             );
         }
         Response::Indexing(id) => {
-            println!("[{}] indexing", id);
+            println!("[{}] indexing", id.to_string().bright_purple());
         }
         Response::OpenStatus(id, status) => {
-            println!("[{}] cannot be opened: {:?}", id, status);
+            println!(
+                "[{}] cannot be opened: {:?}",
+                id.to_string().bright_purple(),
+                status
+            );
         }
         Response::Open(path) => {
             open::that(path).unwrap();
         }
         Response::Unhandled => {
-            println!("Unhandled Request");
+            println!("monk could not handle the request");
         }
         Response::Many(responses) => {
             for response in responses {
@@ -158,10 +177,13 @@ pub fn handle_response(response: Response) {
         Response::Status(status) => {
             print_status(status);
         }
+        Response::Custom(string) => {
+            println!("{}", string);
+        }
         Response::Ok => {}
         Response::Error(e) => {
             println!("error: {}", e);
-            std::process::exit(1);
+            // std::process::exit(1);
         }
     }
 }
@@ -300,7 +322,7 @@ fn print_status(status: StatusResponse) {
     }
 
     if let Some(meta) = status.meta {
-        println!("[{}]:", meta.id.purple());
+        println!("[{}]:", meta.id.bright_purple());
         println!(
             "size:     {}",
             get_byte_unit(meta.bytes_on_disk).to_string().green()
@@ -309,13 +331,13 @@ fn print_status(status: StatusResponse) {
             "index:    {}",
             meta.index_status
                 .map(|s| format!("{:?}", s))
-                .unwrap_or_else(|| "Not downloaded".to_string())
+                .unwrap_or_else(|| "not indexed".to_string())
         );
         println!(
             "offline:  {}",
             meta.offline_status
                 .map(|s| format!("{:?}", s))
-                .unwrap_or_else(|| "Not indexed".to_string())
+                .unwrap_or_else(|| "not downloaded".to_string())
         );
     }
 }

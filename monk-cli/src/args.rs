@@ -15,9 +15,7 @@ pub enum Subcommand {
     ///
     /// The outputted config is equivalent to the config created
     /// from `monkd -c [file]`
-    Config {
-        file: Option<PathBuf>,
-    },
+    Config { file: Option<PathBuf> },
     /// Prints the default config for monkd
     DefaultConfig,
     /// Add an item to the database
@@ -46,20 +44,21 @@ pub enum Subcommand {
         count: Option<usize>,
     },
     /// Get a single item from the database
-    Get {
-        id: String,
-    },
+    Get { id: String },
     /// Delete an item from the database
-    Delete {
-        id: String,
-    },
+    Delete { id: String },
     /// Download either a single ID or all ids if empty
     Download {
         // #[structopt(short, long)]
         // all: bool,
         id: Option<String>,
     },
+    /// Open an ID with the system's default program for the item's filetype.
     Open {
+        /// Block until the item is downloaded and ready to be opened
+        #[structopt(short, long)]
+        blocking: bool,
+        /// The ID of the item to open
         id: String,
     },
     /// Run an ID through the full text search indexing pipeline. Simply write
@@ -96,7 +95,7 @@ pub enum Subcommand {
     /// Get the status of various parts of the daemon. Simply write
     /// an ID rather than a subcommand to get the status of that ID.
     Status {
-        /// The type of status to retreive.
+        /// The type of status to retrieve.
         #[structopt(subcommand)]
         kind: StatusRequestKind,
     },
