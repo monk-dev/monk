@@ -1,21 +1,12 @@
 [package]
 name = "monkd"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>"]
+description = "monkd manages a list of information that you want to later search, summarize, and open offline"
+license = "AGPL-3.0"
+repository="https://gitlab.com/fisherdarling/monk"
 edition = "2018"
-description = ""
-license = "NONE"
-
-[package.metadata.deb]
-maintainer = "Fisher Darling <fdarling@mines.edu>"
-copyright = "2020, Fisher Darling <fdarling@mines.edu>"
-extended-description-file = "README.md"
-depends = "$auto, libssl-dev"
-section = "utility"
-priority = "optional"
-assets = [
-    ["../target/release/monkd", "usr/bin/", "755"],
-]
+publish = false
 
 [dependencies]
 async-channel = "*"
@@ -43,3 +34,14 @@ reqwest = "*"
 directories-next = "*"
 async-trait = "*"
 scraper = "*"
+
+[package.metadata.deb]
+maintainer = "Fisher Darling <fdarling@mines.edu>"
+copyright = "2020, Fisher Darling <fdarling@mines.edu>"
+extended-description-file = "README.md"
+depends = "$auto, libssl-dev"
+section = "utility"
+priority = "optional"
+assets = [
+    ["../target/release/monkd", "usr/bin/", "755"],
+]
