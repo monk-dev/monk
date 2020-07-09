@@ -4,6 +4,8 @@ use structopt::StructOpt;
 
 #[derive(Debug, Clone, PartialEq, Eq, StructOpt)]
 pub struct Args {
+    #[structopt(skip)]
+    pub oneline: bool,
     pub config: Option<PathBuf>,
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
@@ -39,7 +41,10 @@ pub enum Subcommand {
     },
     /// List all items in the database
     List {
-        /// How many items to return. Defaults to all
+        /// Print lists of metadata items on a single line. Much like `git log --oneline`
+        #[structopt(short, long)]
+        oneline: bool,
+        /// How many items to return. Defaults to all items
         // #[structopt(short, long)]
         count: Option<usize>,
     },
@@ -86,6 +91,9 @@ pub enum Subcommand {
     ///
     /// The query grammar can be found here: https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html
     Search {
+        /// Print lists of metadata items on a single line. Much like `git log --oneline`
+        #[structopt(short, long)]
+        oneline: bool,
         /// Maximum number of items to return
         #[structopt(short, long, default_value = "1")]
         count: usize,
