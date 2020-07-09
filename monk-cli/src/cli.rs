@@ -21,7 +21,7 @@ use monkd::status::StatusResponse;
 pub struct Cli;
 
 impl Cli {
-    pub async fn run(settings: Settings, args: Args) -> Result<(), Error> {
+    pub async fn run(settings: Settings, mut args: Args) -> Result<(), Error> {
         check_or_spawn(&settings).await?;
 
         let request = match args.subcommand.clone() {
@@ -45,10 +45,18 @@ impl Cli {
 
                 Request::Add { name, url, comment }
             }
-            Subcommand::List { count } => Request::List { count },
+            Subcommand::List { oneline, count } => {
+                args.oneline = oneline;
+                Request::List { count }
+            }
             Subcommand::Delete { id } => Request::Delete { id },
             Subcommand::Get { id } => Request::Get { id },
-            Subcommand::Search { count, query } => {
+            Subcommand::Search {
+                oneline,
+                count,
+                query,
+            } => {
+                args.oneline |= oneline;
                 let query = query.join(" ");
 
                 Request::Search {
@@ -96,13 +104,13 @@ impl Cli {
             .json::<Response>()
             .await?;
 
-        handle_response(response);
+        handle_response(&args, response);
 
         Ok(())
     }
 }
 
-pub fn handle_response(response: Response) {
+pub fn handle_response(args: &Args, response: Response) {
     match response {
         Response::Item(meta) => {
             print_tabled(vec![meta]);
@@ -117,7 +125,11 @@ pub fn handle_response(response: Response) {
                     "monk add [-n <name>] -u <url>".yellow(),
                 )
             } else {
-                print_tabled(items);
+                if args.oneline {
+                    print_oneline(items);
+                } else {
+                    print_tabled(items);
+                }
             }
         }
         Response::TooManyMeta(id, metas) => print_too_many(id, metas),
@@ -171,7 +183,7 @@ pub fn handle_response(response: Response) {
         }
         Response::Many(responses) => {
             for response in responses {
-                handle_response(response);
+                handle_response(args, response);
             }
         }
         Response::Status(status) => {
@@ -267,20 +279,30 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
             Alignment::Right,
         ));
 
-        // if let Some(last_read) = meta.last_read() {
-        //     row.push(TableCell::new_with_alignment(
-        //         last_read.format("%b %d, %Y").to_string(),
-        //         1,
-        //         Alignment::Center,
-        //     ));
-        // } else {
-        //     row.push(TableCell::new_with_alignment("n/a", 1, Alignment::Center));
-        // }
-
         table.add_row(Row::new(row));
     }
 
     table
+}
+
+fn print_oneline(metas: Vec<Meta>) {
+    for meta in metas {
+        print!("[{}]", meta.id().bright_purple());
+        if let Some(name) = meta.name() {
+            print!(" {}:", name.yellow());
+        }
+
+        if let Some(url) = meta.url() {
+            print!(" {}", url.to_string().underline().bright_blue());
+        }
+
+        if let Some(comment) = meta.comment() {
+            print!(" {}", comment);
+        }
+
+        print!(" {}", meta.found().format("%b %d, %Y").to_string().green());
+        println!();
+    }
 }
 
 fn print_status(status: StatusResponse) {
