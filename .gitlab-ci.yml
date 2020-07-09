@@ -5,6 +5,11 @@ variables:
   APT_CACHE_DIR: $CI_PROJECT_DIR/apt
   GIT_SUBMODULE_STRATEGY: recursive
 
+cache:
+  paths:
+    - .cargo
+    - target/
+
 before_script:
   - rustup component add rustfmt
 
@@ -39,7 +44,7 @@ build:release:
     refs:
       - master
 
-package:deb:
+package-deb:
   stage: package
   before_script:
     - cargo install cargo-deb
@@ -53,7 +58,30 @@ package:deb:
     refs:
       - master
 
-verify:deb:
+package-fedora:
+  image: "fedora:latest"
+  stage: package
+  before_script:
+    - until dnf install -y rpmdevtools
+    - do
+    -    echo "Trying again"
+    - done
+  script:
+    - rpmdev-setuptree
+    - mkdir -p ~/rpmbuild/BUILD/target/release
+    - cp target/release/monk ~/rpmbuild/BUILD/target/release
+    - cp target/release/monkd ~/rpmbuild/BUILD/target/release
+    - rpmbuild -ba monk.spec
+    - cp ~/rpmbuild/RPMS/x86_64/*.rpm target/
+    - ls target/
+  artifacts:
+    paths:
+      - target/*.rpm
+  only:
+    refs:
+      - master
+
+verify-deb:
   image: "ubuntu:latest"
   cache: {}
   stage: verify
@@ -63,11 +91,26 @@ verify:deb:
   script:
     - "dpkg -i target/debian/monk*.deb"
     - monk config
+  dependencies:
+    - package-deb
+  needs: ["package-deb"]
   only:
     refs:
       - master
 
-cache:
-  paths:
-    - .cargo
-    - target/
+verify-fedora:
+  image: "fedora:latest"
+  cache: {}
+  stage: verify
+  before_script:
+    - dnf install -y openssl
+  script:
+    - ls target/
+    - rpm -i target/*.rpm
+    - monk config
+  dependencies:
+    - package-fedora
+  needs: ["package-fedora"]
+  only:
+    refs:
+      - master
