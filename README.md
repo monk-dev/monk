@@ -17,7 +17,11 @@ $ monk --version
 monk-cli 0.1.0
 ```
 
-In the future, pre-built binaries will be available!
+### Arch Linux
+
+```sh
+$ yay -S monk
+```
 
 ## Usage
 
