@@ -10,21 +10,25 @@ Currently `monk` can store, list, and download webpages. Planned future features
 
 To build from source, first clone the repo (recursively!) and install Rust. To install rust, visit: https://rustup.rs/
 
-```
+```sh
 $ cargo install --path monkd
 $ cargo install --path monk-cli
 $ monk --version
 monk-cli 0.1.0
 ```
 
-In the future, pre-built binaries will be available!
+### Arch Linux
+
+```sh
+$ yay -S monk
+```
 
 ## Usage
 
 For any subcommand, simply use `--help` to view all available options and descriptions.
 
 ### Adding, downloading, and opening an article:
-```
+```sh
 $ monk add "AF_XDP" -u https://lwn.net/Articles/750845/ -c "Cool article about fast packet capturing, pretty pictures\!"
 ╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
 │   name  │                url                │                 comment                │      date     │      id     │
@@ -45,7 +49,7 @@ As you can see above, `monk open` will fail until the document is fully download
 Searching for documents in `monk` is relatively straight forward. Once a document is added, its metadata is immediately searchable.
 
 Since the term "packet" is contained within the comment section of the article, that article is returned:
-```
+```sh
 $ monk add "AF_XDP" -u https://lwn.net/Articles/750845/ -c "Cool article about fast packet capturing, pretty pictures\!"
 $ monk search packet
 ╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
@@ -57,7 +61,7 @@ $ monk search packet
 ```
 
 To search across the article's _contents_, the article must first be downloaded and then manually indexed.
-```
+```sh
 $ monk download ls7d
 $ monk status ls7d
 [ls7d2ypeks]:
@@ -79,7 +83,7 @@ $ monk search processing bpf interface
 ```
 
 To simply index everything that's capable of being indexed:
-```
+```sh
 $ monk index all
 [all] Indexing
 ```
@@ -87,20 +91,20 @@ $ monk index all
 `monk` uses [tantivy](https://github.com/tantivy-search/tantivy) for its full text search needs. The [query grammar](https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html) supports boolean logic, lexical ranges, phrases, etc. Most queries will feel a lot like dumb Google though, and words must be spelled correctly (fuzzy search soon!).
 
 ### Removing an article
-```
+```sh
 $ monk delete <id>
 ```
 This removes metadata, offline data, and any indexed data.
 
 ### Listing all saved articles
-```
+```sh
 $ monk list
 ```
 
 ### Status
 
 Get the status of and disk space of the different parts of `monkd`:
-```
+```sh
 $ monk status all
 File Store [0.1.0]:
   586 B
@@ -115,7 +119,7 @@ Search Index:
   2 item(s)
 ```
 Status of an individual item:
-```
+```sh
 $ monk status ls7d
 [ls7d2ypeks]:
 size:     239 B
@@ -124,7 +128,7 @@ offline:  Ready
 ```
 
 ### Stopping the daemon
-```
+```sh
 $ monk stop
 ```
 
@@ -136,7 +140,7 @@ Configuration and data is stored in the preferred system folders. For example, o
 
 To view the configuration or the default configuration for the system:
 
-```
+```sh
 $ monk config [file]  # Actual running config
 $ monk default-config # Default system config
 ```
