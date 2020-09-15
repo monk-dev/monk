@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::error::Error;
+use crate::server::request::EditKind;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineStore {
@@ -69,6 +70,26 @@ impl OfflineStore {
         self.dirty = true;
 
         Ok(&mut self.data[id])
+    }
+
+    pub fn edit(
+        &mut self,
+        description: &impl AsRef<str>,
+        edit: &EditKind,
+    ) -> Result<OfflineData, Error> {
+        let id: usize = self.find_id(&description)?;
+
+        tracing::info!("Editing: {:?}", edit);
+        self.dirty = true;
+
+        if let Some(u) = edit.url.as_ref() {
+            self.data[id].url = Some(url::Url::parse(&u)?);
+            self.data[id].status = Status::Error("Url Changed, new download required".to_string());
+        }
+        if let Some(n) = edit.name.as_ref() {
+            self.data[id].name = Some(n.clone());
+        }
+        Ok(self.data[id].clone())
     }
 
     pub fn delete(&mut self, description: impl AsRef<str>) -> Result<OfflineData, Error> {

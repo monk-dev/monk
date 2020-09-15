@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{info, instrument};
 
+use crate::server::request::EditKind;
+
 use super::Meta;
 use crate::error::Error;
 
@@ -102,6 +104,25 @@ impl FileStore {
         self.dirty = true;
 
         Ok(())
+    }
+
+    pub fn edit(&mut self, description: &impl AsRef<str>, edit: &EditKind) -> Result<Meta, Error> {
+        let id: usize = self.find_id(&description)?;
+
+        tracing::info!("Editing: {:?}", edit);
+        self.dirty = true;
+
+        if let Some(u) = edit.url.as_ref() {
+            self.metadata[id].url = Some(url::Url::parse(&u)?)
+        }
+        if let Some(n) = edit.name.as_ref() {
+            self.metadata[id].name = Some(n.clone());
+        }
+        if let Some(c) = edit.comment.as_ref() {
+            self.metadata[id].comment = Some(c.clone());
+        }
+
+        Ok(self.metadata[id].clone())
     }
 
     pub fn delete(&mut self, description: impl AsRef<str>) -> Result<Meta, Error> {

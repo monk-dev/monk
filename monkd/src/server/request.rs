@@ -13,6 +13,10 @@ pub enum Request {
     List {
         count: Option<usize>,
     },
+    Edit {
+        id: String,
+        kind: EditKind,
+    },
     Delete {
         id: String,
     },
@@ -55,4 +59,11 @@ pub enum StatusKind {
     Store,
     Offline,
     Id(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EditKind {
+    pub name: Option<String>,
+    pub url: Option<String>,
+    pub comment: Option<String>,
 }

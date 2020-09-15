@@ -50,6 +50,18 @@ pub enum Subcommand {
     },
     /// Get a single item from the database
     Get { id: String },
+    /// Edit the name, url, or comment of a single item from the database
+    Edit {
+        /// The name or id of the iteme you wish to edit
+        id: String,
+        /// New Name
+        #[structopt(short, long)]
+        name: Option<String>,
+        #[structopt(short, long)]
+        url: Option<String>,
+        #[structopt(short, long)]
+        comment: Option<String>,
+    },
     /// Delete an item from the database
     Delete { id: String },
     /// Download either a single ID or all ids if empty

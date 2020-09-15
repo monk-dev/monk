@@ -7,7 +7,7 @@ use crate::metadata::{
     FileStore, Meta,
 };
 use crate::server::{
-    request::{Request, StatusKind},
+    request::{EditKind, Request, StatusKind},
     response::Response,
 };
 use crate::settings::Settings;
@@ -326,6 +326,27 @@ impl<'s> Daemon<'s> {
         }
     }
 
+    pub async fn handle_edit(&mut self, id: String, edit: EditKind) -> Result<Response, Error> {
+        info!("[edit] {:?}", edit);
+
+        let _ = self.offline.write().await.edit(&id, &edit);
+        let req = Request::Download {
+            id: Some(id.to_string()),
+        };
+        let _ = self
+            .daemon_sender
+            .send((req, None))
+            .await
+            .map_err(|_| error!("error sending download req"));
+
+        //This will respond with an ok or an error
+        self.store
+            .write()
+            .await
+            .edit(&id, &edit)
+            .map(Response::Item)
+    }
+
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
         info!("[delete] {:?}", id);
         let id = { self.store.read().await.get(id)?.id().to_string() };
@@ -438,6 +459,7 @@ impl<'s> Daemon<'s> {
 
         match req {
             Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
+            Request::Edit { id, kind } => self.handle_edit(id, kind).await,
             Request::Delete { id } => self.handle_delete(id).await,
             Request::List { count } => self.handle_list(count).await,
             Request::Get { id } => self.handle_get(id).await,
