@@ -330,14 +330,17 @@ impl<'s> Daemon<'s> {
         info!("[edit] {:?}", edit);
 
         let _ = self.offline.write().await.edit(&id, &edit);
-        let req = Request::Download {
-            id: Some(id.to_string()),
-        };
-        let _ = self
-            .daemon_sender
-            .send((req, None))
-            .await
-            .map_err(|_| error!("error sending download req"));
+
+        if let Some(_) = edit.url {
+            let req = Request::Download {
+                id: Some(id.to_string()),
+            };
+            let _ = self
+                .daemon_sender
+                .send((req, None))
+                .await
+                .map_err(|_| error!("error sending download req"));
+        }
 
         //This will respond with an ok or an error
         self.store
