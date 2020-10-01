@@ -1,11 +1,11 @@
 use colored::*;
+use regex::Regex;
 use std::net::SocketAddr;
 use term_table::{
     row::Row,
     table_cell::{Alignment, TableCell},
     Table, TableStyle,
 };
-use regex::Regex;
 use url::Url;
 
 use crate::args::{Args, IndexSubcommand, StatusRequestKind, Subcommand};
@@ -36,7 +36,11 @@ impl Cli {
                 println!("{}", serde_yaml::to_string(&settings).unwrap());
                 std::process::exit(0);
             }
-            Subcommand::Add { mut name, url, comment } => {
+            Subcommand::Add {
+                mut name,
+                url,
+                comment,
+            } => {
                 if name.is_none() && url.is_none() && comment.is_none() {
                     println!("either name, url, or comment must be set");
                     std::process::exit(1);
