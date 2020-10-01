@@ -5,6 +5,7 @@ use term_table::{
     table_cell::{Alignment, TableCell},
     Table, TableStyle,
 };
+use regex::Regex;
 use url::Url;
 
 use crate::args::{Args, IndexSubcommand, StatusRequestKind, Subcommand};
@@ -35,10 +36,20 @@ impl Cli {
                 println!("{}", serde_yaml::to_string(&settings).unwrap());
                 std::process::exit(0);
             }
-            Subcommand::Add { name, url, comment } => {
+            Subcommand::Add { mut name, url, comment } => {
                 if name.is_none() && url.is_none() && comment.is_none() {
                     println!("either name, url, or comment must be set");
                     std::process::exit(1);
+                }
+                if let Some(ref u) = url {
+                    if name.is_none() {
+                        let res = reqwest::get(u).await?;
+                        let body = res.text().await?;
+                        let re = Regex::new(r"<title*?>(.*?)</title>").unwrap();
+                        for cap in re.captures_iter(&body) {
+                            name = Some(cap[1].to_string());
+                        }
+                    }
                 }
 
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
