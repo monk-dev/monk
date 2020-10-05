@@ -58,68 +58,25 @@ impl OfflineStore {
         Ok(())
     }
 
-    pub fn get(&self, id: impl AsRef<str>) -> Result<&OfflineData, Error> {
-        let ids: Vec<usize> = self
-            .data
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
-
-        // tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyIds(id.as_ref().into(), ids));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
-
-        Ok(&self.data[ids[0]])
+    pub fn get(&self, description: impl AsRef<str>) -> Result<&OfflineData, Error> {
+        let id = self.find_id(&description)?;
+        Ok(&self.data[id])
     }
 
-    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Result<&mut OfflineData, Error> {
-        let ids: Vec<usize> = self
-            .data
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
-
-        tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyIds(id.as_ref().into(), ids));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
+    pub fn get_mut(&mut self, description: impl AsRef<str>) -> Result<&mut OfflineData, Error> {
+        let id = self.find_id(&description)?;
 
         self.dirty = true;
 
-        Ok(&mut self.data[ids[0]])
+        Ok(&mut self.data[id])
     }
 
-    pub fn delete(&mut self, id: impl AsRef<str>) -> Result<OfflineData, Error> {
-        let ids: Vec<usize> = self
-            .data
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
+    pub fn delete(&mut self, description: impl AsRef<str>) -> Result<OfflineData, Error> {
+        let id = self.find_id(&description)?;
 
-        tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyIds(id.as_ref().into(), ids));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
-
-        tracing::info!("Deleting: `{}`", id.as_ref());
+        tracing::info!("Deleting: `{}`", description.as_ref());
         self.dirty = true;
-        let removed = self.data.swap_remove(ids[0]);
+        let removed = self.data.swap_remove(id);
 
         if let Some(file) = &removed.file {
             let _ = std::fs::remove_file(file);
@@ -179,11 +136,40 @@ impl OfflineStore {
                 .map_err(|e| tracing::error!("OfflineStore: {}", e));
         }
     }
+    fn find_id(&self, description: &impl AsRef<str>) -> Result<usize, Error> {
+        let ids: Vec<usize> = self
+            .data
+            .iter()
+            .enumerate()
+            .filter_map(|(i, od)| {
+                if od.id().starts_with(description.as_ref())
+                    || od
+                        .name()
+                        .map(|name| name.starts_with(description.as_ref()))
+                        .unwrap_or_default()
+                {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        tracing::info!("Ids: {:?}", ids);
+
+        if ids.len() > 1 {
+            return Err(Error::TooManyIds(description.as_ref().into(), ids));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(description.as_ref().into()));
+        }
+        Ok(ids[0])
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineData {
     pub id: String,
+    pub name: Option<String>,
     pub url: Option<Url>,
     pub file: Option<PathBuf>,
     pub status: Status,
@@ -192,6 +178,10 @@ pub struct OfflineData {
 impl OfflineData {
     pub fn id(&self) -> &str {
         &self.id
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 
     pub fn file(&self) -> Option<&Path> {

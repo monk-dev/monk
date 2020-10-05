@@ -377,7 +377,7 @@ impl<'s> Daemon<'s> {
         Ok(Response::List(metas))
     }
 
-    pub async fn handle_open(&mut self, id: String) -> Result<Response, Error> {
+    pub async fn handle_open(&mut self, id: String, online: bool) -> Result<Response, Error> {
         info!("[open] {:?}", id);
         match self.offline.read().await.get(&id) {
             Ok(data) => {
@@ -391,6 +391,16 @@ impl<'s> Daemon<'s> {
                     meta.last_read = Some(now);
                 }
 
+                if online {
+                    if let Some(url) = &data.url {
+                        return Ok(Response::Open(std::path::PathBuf::from(
+                            url.clone().to_string(),
+                        )));
+                    } else {
+                        return Ok(Response::Error("No Url Found".to_string()));
+                    }
+                }
+
                 if let Some(path) = &data.file {
                     Ok(Response::Open(path.clone()))
                 } else {
@@ -401,7 +411,8 @@ impl<'s> Daemon<'s> {
                 }
             }
             Err(_e) => {
-                if self.settings.daemon().download_on_open {
+                let store = self.store.read().await;
+                if self.settings.daemon().download_on_open && store.get(&id).is_ok() {
                     let req = Request::Download {
                         id: Some(id.to_string()),
                     };
@@ -431,7 +442,7 @@ impl<'s> Daemon<'s> {
             Request::List { count } => self.handle_list(count).await,
             Request::Get { id } => self.handle_get(id).await,
             Request::Download { id } => self.handle_download(id).await,
-            Request::Open { id } => self.handle_open(id).await,
+            Request::Open { id, online } => self.handle_open(id, online).await,
             Request::UpdateMeta(m) => {
                 self.store.write().await.update(m.id().to_string(), m)?;
                 Ok(Response::Ok)

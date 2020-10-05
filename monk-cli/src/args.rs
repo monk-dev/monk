@@ -63,6 +63,9 @@ pub enum Subcommand {
         /// Block until the item is downloaded and ready to be opened
         #[structopt(short, long)]
         blocking: bool,
+        /// Open the url instead of the offline store.
+        #[structopt(short, long)]
+        online: bool,
         /// The ID of the item to open
         id: String,
     },
