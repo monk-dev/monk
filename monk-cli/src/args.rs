@@ -50,7 +50,7 @@ pub enum Subcommand {
     },
     /// Get a single item from the database
     Get { id: String },
-    /// Edit the name, url, or comment of a single item from the database
+    /// Edit the name, url, or comment of a single item from the database. Fields are optional.
     Edit {
         /// The name or id of the item you wish to edit
         id: String,
