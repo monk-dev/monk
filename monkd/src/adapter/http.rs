@@ -65,6 +65,7 @@ impl Adapter for HttpAdapter {
 
             Some(OfflineData {
                 id: meta.id().to_string(),
+                name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
                 file: None,
                 status: Status::Downloading,
@@ -99,6 +100,7 @@ impl Adapter for HttpAdapter {
 
             let offline_data = offline.unwrap_or_else(|| OfflineData {
                 id: meta.id().to_string(),
+                name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
                 file: None,
                 status: Status::Downloading,

@@ -73,54 +73,18 @@ impl FileStore {
         Ok(())
     }
 
-    pub fn get(&self, id: impl AsRef<str>) -> Result<&Meta, Error> {
-        let ids: Vec<usize> = self
-            .metadata
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
-
-        tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyMetas(
-                id.as_ref().into(),
-                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
-            ));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
-
-        // self.metadata.iter().find(|m| m.id() == id.as_ref())
-        Ok(&self.metadata[ids[0]])
+    pub fn get(&self, description: impl AsRef<str>) -> Result<&Meta, Error> {
+        let id = self.find_id(&description)?;
+        Ok(&self.metadata[id])
     }
 
-    pub fn get_mut(&mut self, id: impl AsRef<str>) -> Result<&mut Meta, Error> {
-        let ids: Vec<usize> = self
-            .metadata
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
-
-        tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyMetas(
-                id.as_ref().into(),
-                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
-            ));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
+    pub fn get_mut(&mut self, description: impl AsRef<str>) -> Result<&mut Meta, Error> {
+        let id = self.find_id(&description)?;
 
         self.dirty = true;
 
         // self.metadata.iter().find(|m| m.id() == id.as_ref())
-        Ok(&mut self.metadata[ids[0]])
+        Ok(&mut self.metadata[id])
     }
 
     pub fn index(&self, idx: usize) -> &Meta {
@@ -140,30 +104,13 @@ impl FileStore {
         Ok(())
     }
 
-    pub fn delete(&mut self, id: impl AsRef<str>) -> Result<Meta, Error> {
-        let ids: Vec<usize> = self
-            .metadata
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.id().starts_with(id.as_ref()))
-            .map(|(i, _)| i)
-            .collect();
+    pub fn delete(&mut self, description: impl AsRef<str>) -> Result<Meta, Error> {
+        let id = self.find_id(&description)?;
 
-        tracing::info!("Ids: {:?}", ids);
-
-        if ids.len() > 1 {
-            return Err(Error::TooManyMetas(
-                id.as_ref().into(),
-                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
-            ));
-        } else if ids.is_empty() {
-            return Err(Error::IdNotFound(id.as_ref().into()));
-        }
-
-        tracing::info!("Deleting: `{}`", id.as_ref());
+        tracing::info!("Deleting: `{}`", description.as_ref());
         self.dirty = true;
 
-        let removed = self.metadata.swap_remove(ids[0]);
+        let removed = self.metadata.swap_remove(id);
 
         Ok(removed)
     }
@@ -204,6 +151,38 @@ impl FileStore {
                 .commit()
                 .map_err(|e| tracing::error!("FileStore: {}", e));
         }
+    }
+
+    fn find_id(&self, description: &impl AsRef<str>) -> Result<usize, Error> {
+        let ids: Vec<usize> = self
+            .metadata
+            .iter()
+            .enumerate()
+            .filter_map(|(i, meta)| {
+                if meta.id().starts_with(description.as_ref())
+                    || meta
+                        .name()
+                        .map(|name| name.starts_with(description.as_ref()))
+                        .unwrap_or_default()
+                {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        tracing::info!("Ids: {:?}", ids);
+
+        if ids.len() > 1 {
+            return Err(Error::TooManyMetas(
+                description.as_ref().into(),
+                ids.into_iter().map(|i| self.metadata[i].clone()).collect(),
+            ));
+        } else if ids.is_empty() {
+            return Err(Error::IdNotFound(description.as_ref().into()));
+        }
+        Ok(ids[0])
     }
 }
 

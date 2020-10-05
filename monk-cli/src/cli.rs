@@ -89,7 +89,7 @@ impl Cli {
             Subcommand::Stop => Request::Stop,
             Subcommand::ForceShutdown => Request::ForceShutdown,
             Subcommand::Download { id } => Request::Download { id },
-            Subcommand::Open { id, .. } => Request::Open { id },
+            Subcommand::Open { id, online, .. } => Request::Open { id, online },
         };
 
         let socket = SocketAddr::new(settings.daemon().address, settings.daemon().port);

@@ -24,6 +24,7 @@ pub enum Request {
     },
     Open {
         id: String,
+        online: bool,
     },
     Search {
         count: Option<usize>,
