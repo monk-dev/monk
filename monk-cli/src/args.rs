@@ -52,7 +52,7 @@ pub enum Subcommand {
     Get { id: String },
     /// Edit the name, url, or comment of a single item from the database
     Edit {
-        /// The name or id of the iteme you wish to edit
+        /// The name or id of the item you wish to edit
         id: String,
         /// New Name
         #[structopt(short, long)]
