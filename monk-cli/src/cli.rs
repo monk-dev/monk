@@ -1,5 +1,5 @@
 use colored::*;
-use regex::Regex;
+use scraper::{Html, Selector};
 use std::net::SocketAddr;
 use term_table::{
     row::Row,
@@ -46,14 +46,16 @@ impl Cli {
                     std::process::exit(1);
                 }
                 if let Some(ref u) = url {
+                    let res = reqwest::get(u).await?;
+                    let body = res.text().await?;
                     if name.is_none() {
-                        let res = reqwest::get(u).await?;
-                        let body = res.text().await?;
-                        let re = Regex::new(r"<title*?>(.*?)</title>").unwrap();
-                        for cap in re.captures_iter(&body) {
-                            name = Some(cap[1].to_string());
+                        let fragment = Html::parse_fragment(&body); // Parse the top of the page
+                        let selector = Selector::parse("title").unwrap();
+                        if let Some(title) = fragment.select(&selector).next() {
+                            name = Some(title.inner_html());
                         }
                     }
+                    // TODO: Scrape for a description
                 }
 
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
