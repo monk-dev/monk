@@ -21,7 +21,7 @@ pub enum Response {
     IndexStatus(String, Option<IndexStatus>),
     Indexing(String),
     Status(StatusResponse),
-    SearchResult(Vec<Meta>),
+    SearchResult(Vec<(Meta, tantivy::Snippet)>), // Meta, Fragment, Highlight
     Many(Vec<Response>),
     Open(PathBuf),
     Unhandled,

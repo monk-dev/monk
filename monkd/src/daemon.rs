@@ -390,15 +390,19 @@ impl<'s> Daemon<'s> {
         count: Option<usize>,
     ) -> Result<Response, Error> {
         let count = count.unwrap_or(1).max(1);
-        let ids = self.index.write().await.search(query, count)?;
-        let mut metas = Vec::new();
+        let searchResult = self.index.write().await.search(query, count)?;
+        let mut results = Vec::new();
 
-        for id in ids {
+        for (id, snip) in searchResult {
             let meta = self.store.read().await.get(id)?.clone();
-            metas.push(meta)
+            results.push((
+                meta,
+                snip.fragments().to_string(),
+                snip.highlighted().to_string(),
+            ));
         }
 
-        Ok(Response::SearchResult(metas))
+        Ok(Response::SearchResult(results))
     }
 
     pub async fn handle_open(&mut self, id: String, online: bool) -> Result<Response, Error> {

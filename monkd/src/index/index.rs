@@ -54,7 +54,11 @@ impl Index {
         Ok(count)
     }
 
-    pub fn search(&self, query: String, count: usize) -> Result<Vec<String>, Error> {
+    pub fn search(
+        &self,
+        query: String,
+        count: usize,
+    ) -> Result<Vec<(String, tantivy::Snippet)>, Error> {
         tracing::info!("[search] Query: {:?}", query);
 
         let reader = self.index.reader()?;
@@ -68,6 +72,8 @@ impl Index {
         );
         let query = query_parser.parse_query(&query)?;
 
+        let snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+
         // tracing::info!("Parsed query");
 
         let resulting_docs: Vec<(f32, DocAddress)> =
@@ -80,9 +86,14 @@ impl Index {
             .map(|(_score, address)| searcher.doc(address))
             .collect();
 
-        let ids: Vec<_> = docs?
+        let ids: Vec<(_, _)> = docs?
             .into_iter()
-            .map(|doc| doc.get_first(ID).unwrap().text().unwrap().to_string())
+            .map(|doc| {
+                (
+                    doc.get_first(ID).unwrap().text().unwrap().to_string(),
+                    snippet_generator.snippet_from_doc(&doc),
+                )
+            })
             .collect();
 
         tracing::info!("Collected {} ids", ids.len());
