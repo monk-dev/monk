@@ -110,7 +110,7 @@ pub enum Subcommand {
         #[structopt(short, long)]
         oneline: bool,
         /// Maximum number of items to return
-        #[structopt(short, long, default_value = "1")]
+        #[structopt(short, long, default_value = "5")]
         count: usize,
         /// A properly structured search query
         query: Vec<String>,

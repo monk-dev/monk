@@ -8,7 +8,7 @@ use crate::metadata::{
 };
 use crate::server::{
     request::{Edit, Request, StatusKind},
-    response::Response,
+    response::{Response, SnippetDef},
 };
 use crate::settings::Settings;
 use crate::status::*;
@@ -389,17 +389,12 @@ impl<'s> Daemon<'s> {
         query: String,
         count: Option<usize>,
     ) -> Result<Response, Error> {
-        let count = count.unwrap_or(1).max(1);
-        let searchResult = self.index.write().await.search(query, count)?;
+        let count = count.unwrap_or(5);
+        let search_result = self.index.write().await.search(query, count)?;
         let mut results = Vec::new();
-
-        for (id, snip) in searchResult {
+        for (id, snip) in search_result {
             let meta = self.store.read().await.get(id)?.clone();
-            results.push((
-                meta,
-                snip.fragments().to_string(),
-                snip.highlighted().to_string(),
-            ));
+            results.push((meta, SnippetDef::from(snip)));
         }
 
         Ok(Response::SearchResult(results))

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use tantivy::{
     collector::TopDocs, directory::*, query::QueryParser, DocAddress, Document, Index as TIndex,
-    IndexWriter, Opstamp, Term,
+    IndexWriter, Opstamp, SnippetGenerator, Term,
 };
 
 use crate::error::Error;
@@ -70,23 +70,22 @@ impl Index {
             &self.index,
             vec![ID, NAME, URL, COMMENT, BODY, TITLE, EXTRA],
         );
+
         let query = query_parser.parse_query(&query)?;
-
-        let snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
-
-        // tracing::info!("Parsed query");
 
         let resulting_docs: Vec<(f32, DocAddress)> =
             searcher.search(&query, &TopDocs::with_limit(count))?;
 
-        // tracing::info!("Executed search");
+        let snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
 
         let docs: Result<Vec<_>, _> = resulting_docs
             .into_iter()
             .map(|(_score, address)| searcher.doc(address))
             .collect();
 
-        let ids: Vec<(_, _)> = docs?
+        let docs = &docs?;
+
+        let results: Vec<(_, _)> = docs
             .into_iter()
             .map(|doc| {
                 (
@@ -96,9 +95,8 @@ impl Index {
             })
             .collect();
 
-        tracing::info!("Collected {} ids", ids.len());
-
-        Ok(ids)
+        tracing::info!("Collected {} ids", results.len());
+        Ok(results)
     }
 
     pub fn insert_meta(&mut self, meta: &Meta) -> Result<Opstamp, Error> {
