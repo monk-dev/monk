@@ -338,20 +338,37 @@ fn print_search(results: Vec<(Meta, SnippetDef)>) {
         // If the snippet length is 0, that mean the match was on the comment or title
         // of the artical. This is because Tantivy does not store comments in
         // the index, and cannot create a snippet.
-        if snippet.fragments().len() == 0 {
+        if snippet.fragment().len() == 0 {
             match meta.comment() {
-                Some(s) => print!("{}", s),
+                Some(s) => print!("{}", s.blue()),
                 _ => (),
             }
             return;
         }
         let mut start_from = 0;
         for (start, end) in snippet.highlighted().iter().map(|h| h.bounds()) {
-            print!("{}", &snippet.fragments()[start_from..start]);
-            print!("{}", &snippet.fragments()[start..end].bold().red());
+            print!(
+                "{}",
+                &snippet.fragment()[start_from..start]
+                    .replace("\n", " ")
+                    .replace("\r", "")
+            );
+            print!(
+                "{}",
+                &snippet.fragment()[start..end]
+                    .replace("\n", " ")
+                    .replace("\r", "")
+                    .bold()
+                    .red()
+            );
             start_from = end;
         }
-        print!("{}", &snippet.fragments()[start_from..]);
+        print!(
+            "{}",
+            &snippet.fragment()[start_from..]
+                .replace("\n", " ")
+                .replace("\r", "")
+        );
         println!();
         println!();
     }

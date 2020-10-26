@@ -55,15 +55,15 @@ impl HighlightSectionDef {
 // geto work around for Serde to work on tantivy
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SnippetDef {
-    fragments: String,
+    fragment: String,
     highlighted: Vec<HighlightSectionDef>,
 }
 impl SnippetDef {
     pub fn highlighted(&self) -> &[HighlightSectionDef] {
         &self.highlighted
     }
-    pub fn fragments(&self) -> &str {
-        &self.fragments
+    pub fn fragment(&self) -> &str {
+        &self.fragment
     }
 }
 
@@ -78,7 +78,7 @@ impl From<Snippet> for SnippetDef {
             sections.push(highlight);
         }
         SnippetDef {
-            fragments: item.fragments().to_string(),
+            fragment: item.fragments().to_string(),
             highlighted: sections,
         }
     }
