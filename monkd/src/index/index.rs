@@ -76,7 +76,8 @@ impl Index {
         let resulting_docs: Vec<(f32, DocAddress)> =
             searcher.search(&query, &TopDocs::with_limit(count))?;
 
-        let snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+        let mut snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+        snippet_generator.set_max_num_chars(120);
 
         let docs: Result<Vec<_>, _> = resulting_docs
             .into_iter()
