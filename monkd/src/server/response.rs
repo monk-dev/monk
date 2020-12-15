@@ -21,6 +21,7 @@ pub enum Response {
     IndexStatus(String, Option<IndexStatus>),
     Indexing(String),
     Status(StatusResponse),
+    SearchResult(Vec<Meta>),
     Many(Vec<Response>),
     Open(PathBuf),
     Unhandled,

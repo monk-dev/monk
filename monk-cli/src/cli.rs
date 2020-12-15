@@ -206,6 +206,19 @@ pub fn handle_response(args: &Args, response: Response) {
         Response::Status(status) => {
             print_status(status);
         }
+        Response::SearchResult(mut items) => {
+            items.sort_by_key(|i| *i.found());
+
+            if items.is_empty() {
+                println!("No matches found");
+            } else {
+                if args.oneline {
+                    print_oneline(items);
+                } else {
+                    print_tabled(items);
+                }
+            }
+        }
         Response::Custom(string) => {
             println!("{}", string);
         }

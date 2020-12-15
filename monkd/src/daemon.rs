@@ -374,7 +374,7 @@ impl<'s> Daemon<'s> {
             metas.push(meta)
         }
 
-        Ok(Response::List(metas))
+        Ok(Response::SearchResult(metas))
     }
 
     pub async fn handle_open(&mut self, id: String, online: bool) -> Result<Response, Error> {
