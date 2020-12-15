@@ -1,4 +1,5 @@
 use colored::*;
+use scraper::{Html, Selector};
 use std::net::SocketAddr;
 use term_table::{
     row::Row,
@@ -35,10 +36,26 @@ impl Cli {
                 println!("{}", serde_yaml::to_string(&settings).unwrap());
                 std::process::exit(0);
             }
-            Subcommand::Add { name, url, comment } => {
+            Subcommand::Add {
+                mut name,
+                url,
+                comment,
+            } => {
                 if name.is_none() && url.is_none() && comment.is_none() {
                     println!("either name, url, or comment must be set");
                     std::process::exit(1);
+                }
+                if let Some(ref u) = url {
+                    let res = reqwest::get(u).await?;
+                    let body = res.text().await?;
+                    if name.is_none() {
+                        let fragment = Html::parse_fragment(&body); // Parse the top of the page
+                        let selector = Selector::parse("title").unwrap();
+                        if let Some(title) = fragment.select(&selector).next() {
+                            name = Some(title.inner_html());
+                        }
+                    }
+                    // TODO: Scrape for a description
                 }
 
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
