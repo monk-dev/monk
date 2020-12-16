@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 async-channel = "*"
 async-lock = "1.1.2"
-tokio = { version = "0.2.24", features = ["full"] }
+tokio = { version = "0.2.*", features = ["full"] }
 futures = "*"
 url =   { version = "*", features = ["serde"] }
 chrono = { version = "*", features = ["serde"] }
