@@ -7,7 +7,7 @@ use crate::metadata::{
     FileStore, Meta,
 };
 use crate::server::{
-    request::{EditKind, Request, StatusKind},
+    request::{Edit, Request, StatusKind},
     response::Response,
 };
 use crate::settings::Settings;
@@ -326,7 +326,7 @@ impl<'s> Daemon<'s> {
         }
     }
 
-    pub async fn handle_edit(&mut self, id: String, edit: EditKind) -> Result<Response, Error> {
+    pub async fn handle_edit(&mut self, id: String, edit: Edit) -> Result<Response, Error> {
         info!("[edit] {:?}", edit);
 
         let _ = self.offline.write().await.edit(&id, &edit);
@@ -462,7 +462,7 @@ impl<'s> Daemon<'s> {
 
         match req {
             Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
-            Request::Edit { id, kind } => self.handle_edit(id, kind).await,
+            Request::Edit { id, edit } => self.handle_edit(id, edit).await,
             Request::Delete { id } => self.handle_delete(id).await,
             Request::List { count } => self.handle_list(count).await,
             Request::Get { id } => self.handle_get(id).await,

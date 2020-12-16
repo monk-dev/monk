@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::error::Error;
-use crate::server::request::EditKind;
+use crate::server::request::Edit;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineStore {
@@ -75,7 +75,7 @@ impl OfflineStore {
     pub fn edit(
         &mut self,
         description: &impl AsRef<str>,
-        edit: &EditKind,
+        edit: &Edit,
     ) -> Result<OfflineData, Error> {
         let id: usize = self.find_id(&description)?;
 

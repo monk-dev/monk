@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{info, instrument};
 
-use crate::server::request::EditKind;
+use crate::server::request::Edit;
 
 use super::Meta;
 use crate::error::Error;
@@ -106,7 +106,7 @@ impl FileStore {
         Ok(())
     }
 
-    pub fn edit(&mut self, description: &impl AsRef<str>, edit: &EditKind) -> Result<Meta, Error> {
+    pub fn edit(&mut self, description: &impl AsRef<str>, edit: &Edit) -> Result<Meta, Error> {
         let id: usize = self.find_id(&description)?;
 
         tracing::info!("Editing: {:?}", edit);

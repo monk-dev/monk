@@ -15,7 +15,7 @@ pub enum Request {
     },
     Edit {
         id: String,
-        kind: EditKind,
+        edit: Edit,
     },
     Delete {
         id: String,
@@ -62,7 +62,7 @@ pub enum StatusKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EditKind {
+pub struct Edit {
     pub name: Option<String>,
     pub url: Option<String>,
     pub comment: Option<String>,

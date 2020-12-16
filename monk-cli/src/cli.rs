@@ -13,7 +13,7 @@ use crate::error::Error;
 
 use monkd::metadata::Meta;
 use monkd::server::{
-    request::{EditKind, Request, StatusKind},
+    request::{Edit, Request, StatusKind},
     response::Response,
 };
 use monkd::settings::Settings;
@@ -73,7 +73,7 @@ impl Cli {
                 comment,
             } => Request::Edit {
                 id,
-                kind: EditKind {
+                edit: Edit {
                     name: name,
                     url: url,
                     comment: comment,
