@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use tantivy::{
     collector::TopDocs, directory::*, query::QueryParser, DocAddress, Document, Index as TIndex,
-    IndexWriter, Opstamp, Term,
+    IndexWriter, Opstamp, SnippetGenerator, Term,
 };
 
 use crate::error::Error;
@@ -54,7 +54,11 @@ impl Index {
         Ok(count)
     }
 
-    pub fn search(&self, query: String, count: usize) -> Result<Vec<String>, Error> {
+    pub fn search(
+        &self,
+        query: String,
+        count: usize,
+    ) -> Result<Vec<(String, tantivy::Snippet)>, Error> {
         tracing::info!("[search] Query: {:?}", query);
 
         let reader = self.index.reader()?;
@@ -66,28 +70,34 @@ impl Index {
             &self.index,
             vec![ID, NAME, URL, COMMENT, BODY, TITLE, EXTRA],
         );
-        let query = query_parser.parse_query(&query)?;
 
-        // tracing::info!("Parsed query");
+        let query = query_parser.parse_query(&query)?;
 
         let resulting_docs: Vec<(f32, DocAddress)> =
             searcher.search(&query, &TopDocs::with_limit(count))?;
 
-        // tracing::info!("Executed search");
+        let mut snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+        snippet_generator.set_max_num_chars(120);
 
         let docs: Result<Vec<_>, _> = resulting_docs
             .into_iter()
             .map(|(_score, address)| searcher.doc(address))
             .collect();
 
-        let ids: Vec<_> = docs?
+        let docs = &docs?;
+
+        let results: Vec<(_, _)> = docs
             .into_iter()
-            .map(|doc| doc.get_first(ID).unwrap().text().unwrap().to_string())
+            .map(|doc| {
+                (
+                    doc.get_first(ID).unwrap().text().unwrap().to_string(),
+                    snippet_generator.snippet_from_doc(&doc),
+                )
+            })
             .collect();
 
-        tracing::info!("Collected {} ids", ids.len());
-
-        Ok(ids)
+        tracing::info!("Collected {} ids", results.len());
+        Ok(results)
     }
 
     pub fn insert_meta(&mut self, meta: &Meta) -> Result<Opstamp, Error> {

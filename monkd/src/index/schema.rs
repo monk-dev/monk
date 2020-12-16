@@ -18,7 +18,7 @@ pub fn current_schema() -> Schema {
     let _ = builder.add_text_field("name", TEXT);
     let _ = builder.add_text_field("url", TEXT);
     let _ = builder.add_text_field("comment", TEXT);
-    let _ = builder.add_text_field("body", TEXT);
+    let _ = builder.add_text_field("body", STORED | TEXT);
     let _ = builder.add_text_field("title", TEXT);
     let _ = builder.add_text_field("extra", TEXT);
     let _ = builder.add_date_field("found", FAST | INDEXED);

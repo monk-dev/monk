@@ -14,7 +14,7 @@ use crate::error::Error;
 use monkd::metadata::Meta;
 use monkd::server::{
     request::{Edit, Request, StatusKind},
-    response::Response,
+    response::{Response, SnippetDef},
 };
 use monkd::settings::Settings;
 use monkd::status::StatusResponse;
@@ -220,15 +220,15 @@ pub fn handle_response(args: &Args, response: Response) {
             print_status(status);
         }
         Response::SearchResult(mut items) => {
-            items.sort_by_key(|i| *i.found());
+            items.sort_by_key(|i| *i.0.found());
 
             if items.is_empty() {
                 println!("No matches found");
             } else {
                 if args.oneline {
-                    print_oneline(items);
+                    print_oneline(items.into_iter().map(|m| m.0).collect());
                 } else {
-                    print_tabled(items);
+                    print_search(items);
                 }
             }
         }
@@ -326,6 +326,56 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
     }
 
     table
+}
+
+fn print_search(results: Vec<(Meta, SnippetDef)>) {
+    for (meta, snippet) in results {
+        print!("[{}]", meta.id().bright_purple());
+        if let Some(name) = meta.name() {
+            print!(" {}:", name.yellow());
+        }
+
+        if let Some(url) = meta.url() {
+            print!(" {}", url.to_string().underline().bright_blue());
+        }
+        println!();
+        // If the snippet length is 0, that mean the match was on the comment or title
+        // of the artical. This is because Tantivy does not store comments in
+        // the index, and cannot create a snippet.
+        if snippet.fragment().len() == 0 {
+            match meta.comment() {
+                Some(s) => print!("{}", s.blue()),
+                _ => (),
+            }
+            return;
+        }
+        let mut start_from = 0;
+        for (start, end) in snippet.highlighted().iter().map(|h| h.bounds()) {
+            print!(
+                "{}",
+                &snippet.fragment()[start_from..start]
+                    .replace("\n", " ")
+                    .replace("\r", "")
+            );
+            print!(
+                "{}",
+                &snippet.fragment()[start..end]
+                    .replace("\n", " ")
+                    .replace("\r", "")
+                    .bold()
+                    .red()
+            );
+            start_from = end;
+        }
+        print!(
+            "{}",
+            &snippet.fragment()[start_from..]
+                .replace("\n", " ")
+                .replace("\r", "")
+        );
+        println!();
+        println!();
+    }
 }
 
 fn print_oneline(metas: Vec<Meta>) {
