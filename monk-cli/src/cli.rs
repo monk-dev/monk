@@ -225,7 +225,11 @@ pub fn handle_response(args: &Args, response: Response) {
             if items.is_empty() {
                 println!("No matches found");
             } else {
-                print_search(items)
+                if args.oneline {
+                    print_oneline(items.into_iter().map(|m| m.0).collect());
+                } else {
+                    print_search(items);
+                }
             }
         }
         Response::Custom(string) => {
