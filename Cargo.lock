@@ -1484,6 +1484,7 @@ dependencies = [
  "monkd",
  "open",
  "reqwest",
+ "scraper",
  "serde 1.0.112",
  "serde_yaml",
  "structopt",
@@ -2818,50 +2819,6 @@ dependencies = [
 [[package]]
 name = "tantivy"
 version = "0.12.0"
-source = "git+https://github.com/tantivy-search/tantivy.git#7d773abc92d844941f047db5646c1ea9c71caa99"
-dependencies = [
- "atomicwrites",
- "base64 0.12.2",
- "bitpacking",
- "byteorder",
- "census",
- "chrono",
- "crc32fast",
- "crossbeam",
- "downcast-rs",
- "fail 0.4.0",
- "failure",
- "fnv",
- "fs2",
- "futures",
- "htmlescape",
- "levenshtein_automata 0.2.0",
- "log 0.4.8",
- "memmap",
- "murmurhash32",
- "notify",
- "num_cpus",
- "once_cell",
- "owned-read",
- "owning_ref",
- "rayon",
- "regex",
- "rust-stemmers",
- "serde 1.0.112",
- "serde_json",
- "smallvec 1.4.0",
- "snap",
- "stable_deref_trait",
- "tantivy-fst 0.3.0",
- "tantivy-query-grammar 0.13.0",
- "tempfile",
- "uuid",
- "winapi 0.3.8",
-]
-
-[[package]]
-name = "tantivy"
-version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02e1d2fbfa82ab829208e5f03f4d2c177b8a126252ab4f80ed232e1064770efb"
 dependencies = [
@@ -2901,6 +2858,50 @@ dependencies = [
  "stable_deref_trait",
  "tantivy-fst 0.2.1",
  "tantivy-query-grammar 0.12.0",
+ "tempfile",
+ "uuid",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "tantivy"
+version = "0.12.0"
+source = "git+https://github.com/tantivy-search/tantivy.git#7d773abc92d844941f047db5646c1ea9c71caa99"
+dependencies = [
+ "atomicwrites",
+ "base64 0.12.2",
+ "bitpacking",
+ "byteorder",
+ "census",
+ "chrono",
+ "crc32fast",
+ "crossbeam",
+ "downcast-rs",
+ "fail 0.4.0",
+ "failure",
+ "fnv",
+ "fs2",
+ "futures",
+ "htmlescape",
+ "levenshtein_automata 0.2.0",
+ "log 0.4.8",
+ "memmap",
+ "murmurhash32",
+ "notify",
+ "num_cpus",
+ "once_cell",
+ "owned-read",
+ "owning_ref",
+ "rayon",
+ "regex",
+ "rust-stemmers",
+ "serde 1.0.112",
+ "serde_json",
+ "smallvec 1.4.0",
+ "snap",
+ "stable_deref_trait",
+ "tantivy-fst 0.3.0",
+ "tantivy-query-grammar 0.13.0",
  "tempfile",
  "uuid",
  "winapi 0.3.8",

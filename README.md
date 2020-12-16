@@ -96,6 +96,12 @@ $ monk delete <id>
 ```
 This removes metadata, offline data, and any indexed data.
 
+### Editing existing articles
+```sh
+$ monk edit <id> --name "New Name!!" --url https://xkcd.com/ -c "Brand new comment!"
+```
+This allows for article names, urls, and comments to be edited.
+
 ### Listing all saved articles
 ```sh
 $ monk list
