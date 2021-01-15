@@ -9,9 +9,11 @@ pub enum Request {
         name: Option<String>,
         url: Option<Url>,
         comment: Option<String>,
+        tags: Vec<String>,
     },
     List {
         count: Option<usize>,
+        tags: Vec<String>,
     },
     Edit {
         id: String,
@@ -37,7 +39,9 @@ pub enum Request {
     Index {
         id: String,
     },
-    IndexAll,
+    IndexAll {
+        tags: Vec<String>,
+    },
     IndexStatus {
         id: String,
     },
@@ -66,4 +70,6 @@ pub struct Edit {
     pub name: Option<String>,
     pub url: Option<String>,
     pub comment: Option<String>,
+    pub add_tags: Vec<String>,
+    pub remove_tags: Vec<String>,
 }

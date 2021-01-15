@@ -24,29 +24,26 @@ pub enum Subcommand {
     Add {
         /// Optional name of an item
         name: Option<String>,
-        /// The uri of the item
+        /// The url of the item
         #[structopt(short, long)]
         url: Option<String>,
+        /// Any associated comment for the item
         #[structopt(short, long)]
         comment: Option<String>,
-        // /// The body of the item
-        // #[structopt(short, long)]
-        // body: Option<String>,
-        // /// The type of item: article, project, newsletter, forum, repo
-        // #[structopt(name = "type", short, long)]
-        // ty: Option<String>,
-        // /// Any associated comment for the item
-        // #[structopt(short, long)]
-        // comment: Option<String>,
+        /// A space seperated list of tags for an article
+        #[structopt(short, long)]
+        tags: Vec<String>,
     },
     /// List all items in the database
     List {
         /// Print lists of metadata items on a single line. Much like `git log --oneline`
         #[structopt(short, long)]
         oneline: bool,
-        /// How many items to return. Defaults to all items
-        // #[structopt(short, long)]
+        /// Limit how many items are returned. Defaults to all items
+        #[structopt(short, long)]
         count: Option<usize>,
+        /// List only articles with specified tags
+        tags: Vec<String>,
     },
     /// Get a single item from the database
     Get { id: String },
@@ -61,6 +58,10 @@ pub enum Subcommand {
         url: Option<String>,
         #[structopt(short, long)]
         comment: Option<String>,
+        #[structopt(short, long)]
+        add_tags: Vec<String>,
+        #[structopt(short, long)]
+        remove_tags: Vec<String>,
     },
     /// Delete an item from the database
     Delete { id: String },
@@ -133,7 +134,10 @@ pub enum IndexSubcommand {
     /// Get the current index status of an ID
     Status { id: String },
     /// Index everything
-    All,
+    All {
+        #[structopt(short, long)]
+        tags: Vec<String>,
+    },
     /// Index the given ID
     #[structopt(external_subcommand)]
     Id(Vec<String>),

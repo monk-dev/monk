@@ -40,6 +40,7 @@ impl Cli {
                 mut name,
                 url,
                 comment,
+                tags,
             } => {
                 if name.is_none() && url.is_none() && comment.is_none() {
                     println!("either name, url, or comment must be set");
@@ -60,23 +61,36 @@ impl Cli {
 
                 let url: Option<Url> = url.map(|s| Url::parse(&s)).transpose()?;
 
-                Request::Add { name, url, comment }
+                Request::Add {
+                    name,
+                    url,
+                    comment,
+                    tags,
+                }
             }
-            Subcommand::List { oneline, count } => {
+            Subcommand::List {
+                oneline,
+                count,
+                tags,
+            } => {
                 args.oneline = oneline;
-                Request::List { count }
+                Request::List { count, tags }
             }
             Subcommand::Edit {
                 id,
                 name,
                 url,
                 comment,
+                add_tags,
+                remove_tags,
             } => Request::Edit {
                 id,
                 edit: Edit {
                     name: name,
                     url: url,
                     comment: comment,
+                    add_tags,
+                    remove_tags,
                 },
             },
             Subcommand::Delete { id } => Request::Delete { id },
@@ -97,7 +111,7 @@ impl Cli {
             Subcommand::Index { command } => match command {
                 IndexSubcommand::Status { id } => Request::IndexStatus { id },
                 IndexSubcommand::Id(id) => Request::Index { id: id[0].clone() },
-                IndexSubcommand::All => Request::IndexAll,
+                IndexSubcommand::All { tags } => Request::IndexAll { tags },
             },
             Subcommand::Status { kind } => match kind {
                 StatusRequestKind::All => Request::Status {
@@ -283,6 +297,7 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
         Alignment::Center,
     ));
     row.push(TableCell::new_with_alignment("date", 1, Alignment::Center));
+    row.push(TableCell::new_with_alignment("tags", 1, Alignment::Center));
     row.push(TableCell::new_with_alignment("id", 1, Alignment::Center));
     // row.push(TableCell::new_with_alignment(
     //     "last opened",
@@ -315,6 +330,22 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
             1,
             Alignment::Center,
         ));
+
+        if meta.tags().is_empty() {
+            row.push(TableCell::new_with_alignment("", 1, Alignment::Center));
+        } else {
+            let mut tag_str: String = String::new();
+            let mut first = true;
+            for tag in meta.tags() {
+                if first {
+                    first = false;
+                } else {
+                    tag_str += ", ";
+                }
+                tag_str += tag;
+            }
+            row.push(TableCell::new_with_alignment(tag_str, 1, Alignment::Center));
+        }
 
         row.push(TableCell::new_with_alignment(
             meta.id(),

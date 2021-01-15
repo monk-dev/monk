@@ -28,9 +28,9 @@ tracing-appender = "*"
 config = "*"
 structopt = "*"
 warp = "*"
-tantivy = { git = "https://github.com/tantivy-search/tantivy.git" }
+tantivy = { git = "https://github.com/tantivy-search/tantivy.git", tag ="0.13.3" }
 monolith = { path = "../monolith" }
-reqwest = "*"
+reqwest = "0.10.10"
 directories-next = "*"
 async-trait = "*"
 scraper = "*"
