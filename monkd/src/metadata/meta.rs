@@ -1,5 +1,6 @@
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::fmt;
 use url::Url;
 
@@ -13,6 +14,7 @@ pub struct Meta {
     pub(crate) found: DateTime<Utc>,
     pub(crate) last_read: Option<DateTime<Utc>>,
     pub(crate) index_status: Option<IndexStatus>,
+    pub(crate) tags: BTreeSet<String>,
 }
 
 impl Meta {
@@ -38,6 +40,10 @@ impl Meta {
 
     pub fn last_read(&self) -> Option<&DateTime<Utc>> {
         self.last_read.as_ref()
+    }
+
+    pub fn tags(&self) -> &BTreeSet<String> {
+        &self.tags
     }
 
     pub fn builder() -> MetaBuilder {
@@ -73,6 +79,7 @@ pub struct MetaBuilder {
     comment: Option<String>,
     found: Option<DateTime<Utc>>,
     last_read: Option<DateTime<Utc>>,
+    tags: Option<BTreeSet<String>>,
 }
 
 impl MetaBuilder {
@@ -84,6 +91,7 @@ impl MetaBuilder {
             comment: None,
             found: None,
             last_read: None,
+            tags: None,
         }
     }
 
@@ -129,6 +137,13 @@ impl MetaBuilder {
         }
     }
 
+    pub fn tags(self, tags: BTreeSet<String>) -> Self {
+        Self {
+            tags: Some(tags),
+            ..self
+        }
+    }
+
     pub fn build(self) -> Meta {
         let found = if let Some(found) = self.found {
             found
@@ -142,6 +157,12 @@ impl MetaBuilder {
             crate::generate_id()
         };
 
+        let tags = if let Some(tags) = self.tags {
+            tags
+        } else {
+            BTreeSet::new()
+        };
+
         Meta {
             id,
             name: self.name,
@@ -150,6 +171,7 @@ impl MetaBuilder {
             found,
             last_read: self.last_read,
             index_status: None,
+            tags,
         }
     }
 }
@@ -170,6 +192,12 @@ impl fmt::Display for Meta {
 
         let found = self.found.format("%a %d, %Y").to_string();
         write!(f, " @ {}", found)?;
+
+        if !self.tags().is_empty() {
+            self.tags
+                .iter()
+                .for_each(|tag| write!(f, "\n\t{}", tag).unwrap_or(()));
+        }
 
         if let Some(comment) = self.comment() {
             write!(f, "\n\t{}", comment)?;

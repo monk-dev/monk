@@ -15,7 +15,7 @@ use crate::status::*;
 
 use async_channel::Sender;
 use async_lock::Lock;
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 use tokio::sync::RwLock;
 
 use tracing::{error, info};
@@ -147,6 +147,7 @@ impl<'s> Daemon<'s> {
         name: Option<String>,
         url: Option<url::Url>,
         comment: Option<String>,
+        tags: Vec<String>,
     ) -> Result<Response, Error> {
         info!("[add] {:?} {:?} {:?}", name, url, comment.is_some());
         let mut builder = Meta::builder();
@@ -161,6 +162,14 @@ impl<'s> Daemon<'s> {
 
         if let Some(comment) = comment {
             builder = builder.comment(comment);
+        }
+
+        if !tags.is_empty() {
+            let mut set: BTreeSet<String> = BTreeSet::new();
+            for tag in tags {
+                set.insert(tag);
+            }
+            builder = builder.tags(set);
         }
 
         let meta = builder.build();
@@ -250,12 +259,20 @@ impl<'s> Daemon<'s> {
         ))
     }
 
-    pub async fn handle_index_all(&mut self) -> Result<Response, Error> {
+    pub async fn handle_index_all(&mut self, tags: Vec<String>) -> Result<Response, Error> {
         let mut response = Vec::new();
 
-        let ids: Vec<_> = {
+        let ids: Vec<_> = if tags.is_empty() {
             let store = self.store.read().await;
             store.data().iter().map(|m| m.id().to_string()).collect()
+        } else {
+            self.store
+                .read()
+                .await
+                .get_union_tags(tags)
+                .iter()
+                .map(|m| m.id().to_string())
+                .collect()
         };
 
         for id in ids {
@@ -352,7 +369,7 @@ impl<'s> Daemon<'s> {
 
     pub async fn handle_delete(&mut self, id: String) -> Result<Response, Error> {
         info!("[delete] {:?}", id);
-        let id = { self.store.read().await.get(id)?.id().to_string() };
+        let id = self.store.read().await.get(id)?.id().to_string();
 
         let _ = self.offline.write().await.delete(&id);
         let _ = self.index.write().await.delete(&id);
@@ -361,15 +378,23 @@ impl<'s> Daemon<'s> {
         self.store.write().await.delete(&id).map(Response::Item)
     }
 
-    pub async fn handle_list(&mut self, count: Option<usize>) -> Result<Response, Error> {
-        info!("[list] {:?}", count);
-        if let Some(count) = count {
-            let mut data = self.store.read().await.data().to_vec();
-            data.truncate(count);
-
-            Ok(Response::List(data))
+    pub async fn handle_list(
+        &mut self,
+        count: Option<usize>,
+        tags: Vec<String>,
+    ) -> Result<Response, Error> {
+        info!("[list] {:?}, {:?}", count, tags);
+        let mut metas: Vec<Meta> = if !tags.is_empty() {
+            self.store.read().await.get_intersection_tags(tags)
         } else {
-            Ok(Response::List(self.store.read().await.data().to_vec()))
+            self.store.read().await.data().to_vec()
+        };
+
+        if let Some(count) = count {
+            metas.truncate(count);
+            Ok(Response::List(metas))
+        } else {
+            Ok(Response::List(metas))
         }
     }
 
@@ -460,10 +485,15 @@ impl<'s> Daemon<'s> {
         tracing::info!("handling request: {:?}", req);
 
         match req {
-            Request::Add { name, url, comment } => self.handle_add(name, url, comment).await,
+            Request::Add {
+                name,
+                url,
+                comment,
+                tags,
+            } => self.handle_add(name, url, comment, tags).await,
             Request::Edit { id, edit } => self.handle_edit(id, edit).await,
             Request::Delete { id } => self.handle_delete(id).await,
-            Request::List { count } => self.handle_list(count).await,
+            Request::List { count, tags } => self.handle_list(count, tags).await,
             Request::Get { id } => self.handle_get(id).await,
             Request::Download { id } => self.handle_download(id).await,
             Request::Open { id, online } => self.handle_open(id, online).await,
@@ -477,7 +507,7 @@ impl<'s> Daemon<'s> {
             }
             Request::Index { id } => self.handle_index(id).await,
             Request::IndexStatus { id } => self.handle_index_status(id).await,
-            Request::IndexAll => self.handle_index_all().await,
+            Request::IndexAll { tags } => self.handle_index_all(tags).await,
             Request::Status { kind } => self.handle_status(kind).await,
             Request::Search { count, query } => self.handle_search(query, count).await,
             r => {

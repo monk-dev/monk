@@ -3,6 +3,7 @@
 // use tokio::io::{AsyncBufReadExt, BufReader};
 // use tokio::stream::{Stream, StreamExt};
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -27,6 +28,7 @@ pub struct FileStore {
     file: PathBuf,
     #[serde(skip)]
     dirty: bool,
+    tags: BTreeMap<String, BTreeSet<String>>, // tag -> id
 }
 
 impl FileStore {
@@ -36,11 +38,23 @@ impl FileStore {
             metadata: Vec::new(),
             file: PathBuf::new(),
             dirty: false,
+            tags: BTreeMap::new(),
         }
     }
 
     pub fn push(&mut self, meta: Meta) -> Result<(), Error> {
         self.dirty = true;
+        if !meta.tags.is_empty() {
+            for tag in meta.tags.iter() {
+                if let Some(ids) = self.tags.get_mut(tag) {
+                    ids.insert(meta.id.clone());
+                } else {
+                    let mut id_set = BTreeSet::new();
+                    id_set.insert(meta.id.clone());
+                    self.tags.insert(tag.clone(), id_set);
+                }
+            }
+        }
         self.metadata.push(meta);
         Ok(())
     }
@@ -51,6 +65,10 @@ impl FileStore {
 
     pub fn version(&self) -> &str {
         &self.version
+    }
+
+    pub fn tags(&self) -> &BTreeMap<String, BTreeSet<String>> {
+        &self.tags
     }
 
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
@@ -89,6 +107,66 @@ impl FileStore {
         Ok(&mut self.metadata[id])
     }
 
+    // Will not deduplicate if 2 of the same id is passed in
+    pub fn get_list<T>(&self, ids: T) -> Vec<Meta>
+    where
+        T: IntoIterator,
+        T::Item: AsRef<str>,
+    {
+        let mut metas = Vec::new();
+        for id in ids {
+            match self.get(id) {
+                Ok(m) => metas.push(m.clone()),
+                _ => (),
+            };
+        }
+        metas
+    }
+
+    // Takes in a collection of tags and returns all metas that have at least
+    // one of the tags in the list. Think union.
+    pub fn get_union_tags<T>(&self, tags: T) -> Vec<Meta>
+    where
+        T: IntoIterator,
+        T::Item: ToString,
+    {
+        let mut ids: BTreeSet<String> = BTreeSet::new();
+        for tag in tags {
+            if let Some(m) = self.tags().get(&tag.to_string()) {
+                for id in m {
+                    ids.insert(id.clone());
+                }
+            }
+        }
+        self.get_list(ids)
+    }
+
+    // Takes in a colection of tags and returns all metas that have all
+    // tags passed in. think intersect
+    pub fn get_intersection_tags<T>(&self, tags: T) -> Vec<Meta>
+    where
+        T: IntoIterator,
+        T::Item: ToString,
+    {
+        let mut ids: BTreeSet<String> = BTreeSet::new();
+        let mut is_first = true;
+
+        for tag in tags {
+            if is_first {
+                if let Some(m) = self.tags().get(&tag.to_string()) {
+                    for id in m {
+                        ids.insert(id.clone());
+                    }
+                }
+                is_first = false;
+            }
+            if let Some(m) = self.tags().get(&tag.to_string()) {
+                ids = ids.intersection(&m).cloned().collect();
+            }
+        }
+        self.get_list(ids)
+    }
+
     pub fn index(&self, idx: usize) -> &Meta {
         &self.metadata[idx]
     }
@@ -121,6 +199,22 @@ impl FileStore {
         if let Some(c) = edit.comment.as_ref() {
             self.metadata[id].comment = Some(c.clone());
         }
+        for tag in edit.add_tags.iter() {
+            if let Some(ids) = self.tags.get_mut(tag) {
+                ids.insert(self.metadata[id].id.clone());
+            } else {
+                let mut id_set = BTreeSet::new();
+                id_set.insert(self.metadata[id].id.clone());
+                self.tags.insert(tag.clone(), id_set);
+            }
+            self.metadata[id].tags.insert(tag.clone());
+        }
+        for tag in edit.remove_tags.iter() {
+            if let Some(ids) = self.tags.get_mut(tag) {
+                ids.remove(&self.metadata[id].id);
+            }
+            self.metadata[id].tags.remove(tag);
+        }
 
         Ok(self.metadata[id].clone())
     }
@@ -132,6 +226,13 @@ impl FileStore {
         self.dirty = true;
 
         let removed = self.metadata.swap_remove(id);
+
+        // House keeping for tag -> metadata data structure
+        for tag in removed.tags.iter() {
+            if let Some(set) = self.tags.get_mut(tag) {
+                set.remove(&removed.id);
+            }
+        }
 
         Ok(removed)
     }
