@@ -28,6 +28,7 @@ pub struct FileStore {
     file: PathBuf,
     #[serde(skip)]
     dirty: bool,
+    #[serde(default)]
     tags: BTreeMap<String, BTreeSet<String>>, // tag -> id
 }
 
