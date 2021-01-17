@@ -14,6 +14,7 @@ pub struct Meta {
     pub(crate) found: DateTime<Utc>,
     pub(crate) last_read: Option<DateTime<Utc>>,
     pub(crate) index_status: Option<IndexStatus>,
+    #[serde(default)]
     pub(crate) tags: BTreeSet<String>,
 }
 
