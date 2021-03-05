@@ -1,4 +1,5 @@
 use monolith::html::{html_to_dom, stringify_document, walk_and_embed_assets};
+use monolith::opts::Options;
 use monolith::utils::retrieve_asset;
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
@@ -17,7 +18,36 @@ const DEFAULT_USER_AGENT: &str =
 pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Error> {
     fs::create_dir_all(&store)?;
 
+    let filename = format!("{}.html", meta.id());
+    let file_path = store.as_ref().join(filename);
+    let fp_str;
+    if let Some(s) = file_path.to_str() {
+        fp_str = s.to_string();
+    } else {
+        fp_str = String::new();
+    }
     if let Some(url) = meta.url() {
+        let opts = Options {
+            no_audio: false,
+            base_url: Some(url.to_string()),
+            no_css: false,
+            ignore_errors: false,
+            no_frames: false,
+            no_fonts: false,
+            no_images: false,
+            isolate: true,
+            no_js: false,
+            insecure: false,
+            no_metadata: false,
+            output: String::new(),
+            silent: true,
+            timeout: 120,
+            user_agent: Some(DEFAULT_USER_AGENT.to_string()),
+            no_video: false,
+            target: fp_str,
+            no_color: false,
+        };
+
         let mut cache = HashMap::new();
         let mut header_map = HeaderMap::new();
         header_map.insert(
@@ -35,28 +65,15 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
         tracing::info!("[{}] Retrieving asset: {}", meta.id(), url.as_str());
 
         let (data, _final_url, _media_type) =
-            retrieve_asset(&mut cache, &client, url.as_str(), url.as_str(), true)?;
+            retrieve_asset(&mut cache, &client, url.as_str(), url.as_str(), &opts, 1)?;
 
         let dom = html_to_dom(&String::from_utf8(data)?);
 
         tracing::info!("[{}] Embedding asset: {}", meta.id(), url.as_str());
 
-        walk_and_embed_assets(
-            &mut cache,
-            &client,
-            url.as_str(),
-            &dom.document,
-            false,
-            false,
-            false,
-            false,
-            false,
-            true,
-        );
+        walk_and_embed_assets(&mut cache, &client, url.as_str(), &dom.document, &opts, 1);
 
-        let html: String = stringify_document(&dom.document, false, false, false, false, true);
-        let filename = format!("{}.html", meta.id());
-        let file_path = store.as_ref().join(filename);
+        let html: String = stringify_document(&dom.document, &opts);
 
         tracing::info!(
             "[{}] document file_path: {}",

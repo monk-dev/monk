@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 async-channel = "*"
 async-lock = "1.1.2"
-tokio = { version = "0.2.*", features = ["full"] }
+tokio = { version = "1.2.*", features = ["full"] }
 futures = "*"
 url =   { version = "*", features = ["serde"] }
 chrono = { version = "*", features = ["serde"] }
@@ -27,10 +27,10 @@ tracing-futures = "*"
 tracing-appender = "*"
 config = "*"
 structopt = "*"
-warp = "*"
+warp = "0.3.*"
 tantivy = { git = "https://github.com/tantivy-search/tantivy.git", tag ="0.13.3" }
 monolith = { path = "../monolith" }
-reqwest = "0.10.10"
+reqwest = "0.11.1"
 directories-next = "*"
 async-trait = "*"
 scraper = "*"
