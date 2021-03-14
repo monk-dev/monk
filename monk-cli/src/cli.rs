@@ -526,7 +526,7 @@ pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
                 e
             })?;
 
-        tokio::time::delay_for(std::time::Duration::from_millis(100)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let mut connect_flag = false;
         for _ in 0..5u8 {
@@ -536,7 +536,7 @@ pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
                     break;
                 }
                 Err(_) => {
-                    tokio::time::delay_for(std::time::Duration::from_millis(50)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 }
             }
         }

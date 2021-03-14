@@ -148,7 +148,7 @@ impl OfflineStore {
     ) -> Result<(), Error> {
         tracing::info!("Auto Commit Delay: {:3.1} s.", delay.as_secs_f32());
         loop {
-            tokio::time::delay_for(delay).await;
+            tokio::time::sleep(delay).await;
 
             let _ = handle
                 .write()
