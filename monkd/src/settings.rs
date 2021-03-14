@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
-use crate::adapter::AdapterSlug;
+use crate::adapter::AdapterType;
 use crate::error::Error;
 use crate::index::settings::IndexSettings;
 use crate::metadata::{file_store::StoreSettings, offline_store::OfflineSettings};
@@ -14,7 +14,7 @@ pub struct Settings {
     offline: OfflineSettings,
     index: IndexSettings,
     log_dir: PathBuf,
-    adapters: Vec<AdapterSlug>,
+    adapters: Vec<AdapterType>,
 }
 
 impl Settings {
@@ -88,7 +88,7 @@ impl Settings {
         &self.index
     }
 
-    pub fn adapters(&self) -> &[AdapterSlug] {
+    pub fn adapters(&self) -> &[AdapterType] {
         &self.adapters
     }
 }
@@ -102,7 +102,7 @@ impl Default for Settings {
                 offline: Default::default(),
                 index: Default::default(),
                 log_dir: dirs.data_dir().join("logs"),
-                adapters: vec![AdapterSlug::Http],
+                adapters: vec![AdapterType::Http, AdapterType::Youtube],
             }
         } else {
             Self {
@@ -111,7 +111,7 @@ impl Default for Settings {
                 offline: Default::default(),
                 index: Default::default(),
                 log_dir: "./logs".into(),
-                adapters: vec![AdapterSlug::Http],
+                adapters: vec![AdapterType::Http, AdapterType::Youtube],
             }
         }
     }

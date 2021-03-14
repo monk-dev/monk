@@ -9,7 +9,7 @@ pub mod status;
 
 use anyhow::Result;
 
-use crate::adapter::{http::HttpAdapter, Adapter, AdapterSlug};
+use crate::adapter::{http::HttpAdapter, youtube::YoutubeAdapter, Adapter, AdapterType};
 use crate::daemon::Daemon;
 use crate::server::{request::Request, response::Response, Server};
 use crate::settings::Settings;
@@ -149,9 +149,13 @@ fn create_adapters(
 ) -> Vec<Lock<Box<dyn Adapter>>> {
     let mut adapters: Vec<Lock<Box<dyn Adapter>>> = Vec::new();
 
-    for slug in settings.adapters() {
-        match slug {
-            AdapterSlug::Http => adapters.push(Lock::new(Box::new(HttpAdapter::new(
+    for a_type in settings.adapters() {
+        match a_type {
+            AdapterType::Youtube => adapters.push(Lock::new(Box::new(YoutubeAdapter::new(
+                settings.offline().data_folder.clone(),
+                sender.clone(),
+            )))),
+            AdapterType::Http => adapters.push(Lock::new(Box::new(HttpAdapter::new(
                 settings.offline().data_folder.clone(),
                 sender.clone(),
             )))),

@@ -1,6 +1,5 @@
 use monolith::html::{html_to_dom, stringify_document, walk_and_embed_assets};
 use monolith::opts::Options;
-use monolith::opts::Options;
 use monolith::utils::retrieve_asset;
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};

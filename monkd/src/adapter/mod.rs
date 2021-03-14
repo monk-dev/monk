@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 
 pub mod http;
+pub mod youtube;
 
 use crate::error::Error;
 use crate::index::Index;
@@ -10,8 +11,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AdapterSlug {
+pub enum AdapterType {
     Http,
+    Youtube,
 }
 
 #[async_trait]
