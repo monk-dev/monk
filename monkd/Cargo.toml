@@ -1,7 +1,7 @@
 [package]
 name = "monkd"
-version = "0.2.0"
-authors = ["Fisher Darling <fdarlingco@gmail.com>"]
+version = "0.3.0"
+authors = ["Fisher Darling <fdarlingco@gmail.com>, Liam Warfield <liam.warfield@gmail.com>"]
 description = "monkd manages a list of information that you want to later search, summarize, and open offline"
 license = "AGPL-3.0"
 repository="https://gitlab.com/fisherdarling/monk"
@@ -36,7 +36,7 @@ async-trait = "*"
 scraper = "*"
 
 [package.metadata.deb]
-maintainer = "Fisher Darling <fdarling@mines.edu>"
+maintainer = "Fisher Darling <fdarling@mines.edu>, Liam Warfield <liam.warfield@gmail.com>"
 copyright = "2020, Fisher Darling <fdarling@mines.edu>"
 extended-description-file = "README.md"
 depends = "$auto, libssl-dev"

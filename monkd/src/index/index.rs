@@ -24,7 +24,10 @@ impl Index {
         let schema = current_schema();
         let mmap_dir = MmapDirectory::open(path).map_err(|e| Error::Tantivy(e.to_string()))?;
         let index =
-            TIndex::open_or_create(mmap_dir, schema).map_err(|e| Error::Tantivy(e.to_string()))?;
+            match TIndex::open_or_create(mmap_dir, schema).map_err(|e| Error::Tantivy(e.to_string())) {
+                Ok(i) => i,
+                Err(_) => return Err(Error::Tantivy("Index schema corrupt! please run `monk config` and delete the index directory. Then run `monk index all`. This will not destroy any downloaded articles".to_string())),
+            };
 
         let writer = index
             .writer(50_000_000)

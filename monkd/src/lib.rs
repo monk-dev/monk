@@ -41,6 +41,14 @@ pub async fn run(settings: Settings) -> Result<()> {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("error creating daemon: {}", e);
+            // Send error to Client
+            let request_future = timeout(timeout_duration, receiver.recv());
+            if let Ok(request) = request_future.await {
+                let (_, response) = request?;
+                if let Some(response) = response {
+                    let _ = response.send(Response::Error(format!("{:?}", e)));
+                }
+            }
             std::process::exit(1);
         }
     };
@@ -74,7 +82,7 @@ pub async fn run(settings: Settings) -> Result<()> {
             tracing::trace!("Processed Result: {:?}", res);
             tracing::trace!("Result requested: {}", response.is_some());
 
-            // Only send the respone if it was requested
+            // Only send the response if it was requested
             if let Some(response) = response {
                 let _ = response.send(res);
             }

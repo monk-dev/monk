@@ -375,7 +375,7 @@ fn print_search(results: Vec<(Meta, SnippetDef)>) {
         // the index, and cannot create a snippet.
         if snippet.fragment().len() == 0 {
             match meta.comment() {
-                Some(s) => print!("{}", s.blue()),
+                Some(s) => print!("{}\n", s.blue()),
                 _ => (),
             }
             return;
