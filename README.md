@@ -150,7 +150,7 @@ The daemon will automatically stop after the not receiving a command within `tim
 
 ## Youtube Videos
 If you have `youtube-dl` and `ffmpeg` installed on your system, monk will automatically use youtube-dl to download videos as .mkv files.
-Monk will also use any available closed captioning to make the script of the video searchable!
+Monk will also use any available closed captioning to make the script of the video searchable.
 
 ## Configuration
 
