@@ -149,7 +149,7 @@ $ monk stop
 The daemon will automatically stop after the not receiving a command within `timeout` time (default: 10 seconds). This can be set in the config file.
 
 ## Youtube Videos
-If you have `youtube-dl` and `ffmpeg` installed on your system, monk will automatically use youtube-dl to download videos as a .mkv file.
+If you have `youtube-dl` and `ffmpeg` installed on your system, monk will automatically use youtube-dl to download videos as .mkv files.
 Monk will also use any available closed captioning to make the script of the video searchable!
 
 ## Configuration
