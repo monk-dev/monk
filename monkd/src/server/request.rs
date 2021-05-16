@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use url::Url;
 
 use crate::metadata::{offline_store::OfflineData, Meta};
@@ -41,6 +42,20 @@ pub enum Request {
     },
     IndexAll {
         tags: Vec<String>,
+    },
+    Import {
+        metas: Meta,
+    },
+    Export,
+    ImportFile {
+        file: String,
+        deep_copy: bool,
+    },
+    ExportFile {
+        // File to store export
+        file: PathBuf,
+        // Export local copies of article as well as metadata
+        deep_copy: bool,
     },
     IndexStatus {
         id: String,

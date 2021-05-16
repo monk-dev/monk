@@ -13,6 +13,8 @@ pub struct Meta {
     #[serde(with = "ts_milliseconds")]
     pub(crate) found: DateTime<Utc>,
     pub(crate) last_read: Option<DateTime<Utc>>,
+    #[serde(default = "default_time")]
+    pub(crate) last_updated: DateTime<Utc>,
     pub(crate) index_status: Option<IndexStatus>,
     #[serde(default)]
     pub(crate) tags: BTreeSet<String>,
@@ -49,6 +51,38 @@ impl Meta {
 
     pub fn builder() -> MetaBuilder {
         MetaBuilder::new()
+    }
+
+    pub fn union(&mut self, other: &Meta) {
+        let newwest;
+        newwest = self.last_updated >= other.last_updated;
+
+        if !newwest {
+            if let Some(_) = other.name {
+                self.name = other.name.clone();
+            }
+            if let Some(_) = other.comment {
+                self.comment = other.comment.clone();
+            }
+            if let Some(_) = other.last_read {
+                self.last_read = other.last_read;
+            }
+            self.found = other.found;
+        } else {
+            if self.name == None {
+                self.name = other.name.clone();
+            }
+            if self.comment == None {
+                self.comment = other.comment.clone();
+            }
+            if self.last_read == None {
+                self.last_read = other.last_read;
+            }
+        }
+
+        self.tags = self.tags.union(&other.tags).cloned().collect();
+
+        self.last_updated = Utc::now();
     }
 }
 
@@ -171,6 +205,7 @@ impl MetaBuilder {
             comment: self.comment,
             found,
             last_read: self.last_read,
+            last_updated: Utc::now(),
             index_status: None,
             tags,
         }
@@ -206,4 +241,8 @@ impl fmt::Display for Meta {
 
         Ok(())
     }
+}
+
+fn default_time() -> DateTime<Utc> {
+    Utc::now()
 }

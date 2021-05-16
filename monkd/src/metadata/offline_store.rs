@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
+use crate::adapter::AdapterSlug;
 use crate::error::Error;
 use crate::server::request::Edit;
 
@@ -185,10 +186,20 @@ impl OfflineStore {
         }
         Ok(ids[0])
     }
+
+    pub fn import(&mut self, file: PathBuf) -> Result<(), Error> {
+        self.dirty = true;
+        let other = OfflineStore::read_file(file)?;
+        for data in other.data.into_iter() {
+            self.data.push(data);
+        }
+        Ok(())
+    }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineData {
+    pub adapter: AdapterSlug,
     pub id: String,
     pub name: Option<String>,
     pub url: Option<Url>,
@@ -275,6 +286,19 @@ impl Default for OfflineSettings {
                 data_folder: "./offline".into(),
                 store_file: "offline.json".into(),
             }
+        }
+    }
+}
+
+impl Default for OfflineData {
+    fn default() -> Self {
+        OfflineData {
+            adapter: AdapterSlug::Http,
+            id: String::new(),
+            name: None,
+            url: None,
+            file: None,
+            status: Status::Error("default".to_string()),
         }
     }
 }

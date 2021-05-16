@@ -15,11 +15,14 @@ pub struct Settings {
     index: IndexSettings,
     log_dir: PathBuf,
     adapters: Vec<AdapterSlug>,
+    #[serde(skip)]
+    config_path: PathBuf,
 }
 
 impl Settings {
     pub fn get_settings(config_path: Option<PathBuf>) -> Result<Self, Error> {
         use config::{Config, Environment, File};
+        let mut cpath = PathBuf::new();
 
         let config_path: Option<PathBuf> = if let Some(path) = config_path {
             Some(path.into())
@@ -63,11 +66,22 @@ impl Settings {
 
         if let Some(config_path) = config_path {
             config.merge(File::with_name(&config_path.to_str().unwrap()))?;
+            cpath = config_path;
         }
 
         config.merge(Environment::with_prefix("monk"))?;
 
-        config.try_into().map_err(Error::ConfigError)
+        match config.try_into::<Settings>() {
+            Ok(mut settings) => {
+                settings.set_config_path(cpath);
+                Ok(settings)
+            }
+            Err(e) => Err(Error::ConfigError(e)),
+        }
+    }
+
+    fn set_config_path(&mut self, path: PathBuf) {
+        self.config_path = path;
     }
 
     pub fn log_dir(&self) -> &Path {
@@ -91,6 +105,10 @@ impl Settings {
     pub fn adapters(&self) -> &[AdapterSlug] {
         &self.adapters
     }
+
+    pub fn config_path(&self) -> &PathBuf {
+        &self.config_path
+    }
 }
 
 impl Default for Settings {
@@ -103,6 +121,7 @@ impl Default for Settings {
                 index: Default::default(),
                 log_dir: dirs.data_dir().join("logs"),
                 adapters: vec![AdapterSlug::Http],
+                config_path: PathBuf::new(),
             }
         } else {
             Self {
@@ -112,6 +131,7 @@ impl Default for Settings {
                 index: Default::default(),
                 log_dir: "./logs".into(),
                 adapters: vec![AdapterSlug::Http],
+                config_path: PathBuf::new(),
             }
         }
     }

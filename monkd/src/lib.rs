@@ -32,6 +32,8 @@ pub async fn run(settings: Settings) -> Result<()> {
 
     let addr = SocketAddr::new(settings.daemon().address, settings.daemon().port);
 
+    tracing::info!("monkd listend on port: {:?}", addr);
+
     tokio::spawn(Server::spawn(addr, sender.clone(), signal));
     let timeout_duration = Duration::from_millis(settings.daemon().timeout as u64);
 
@@ -130,13 +132,8 @@ pub async fn run(settings: Settings) -> Result<()> {
 }
 
 pub fn generate_id() -> String {
-    use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-    let mut rng = thread_rng();
-    std::iter::repeat(())
-        .map(|()| rng.sample(Alphanumeric).to_ascii_lowercase())
-        .take(10)
-        .collect()
+    use uuid::Uuid;
+    Uuid::new_v4().to_string()
 }
 
 pub fn get_dirs() -> Option<ProjectDirs> {

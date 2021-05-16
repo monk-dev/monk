@@ -94,6 +94,15 @@ pub enum Subcommand {
         #[structopt(subcommand)]
         command: IndexSubcommand,
     },
+    /// Import a store.json file.
+    Import { file: String },
+    /// Export monks store.
+    Export {
+        file: String,
+        /// Export all articles in a tar file.
+        #[structopt(short, long)]
+        full: bool,
+    },
     /// Search for metadata based off of the given query
     ///
     /// The query grammar is very simplistic. A query is tokenized and an
@@ -135,6 +144,7 @@ pub enum IndexSubcommand {
     Status { id: String },
     /// Index everything
     All {
+        /// Only index articles with matching tags
         #[structopt(short, long)]
         tags: Vec<String>,
     },
