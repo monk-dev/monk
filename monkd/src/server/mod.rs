@@ -29,11 +29,17 @@ impl Server {
 
         let server = warp::serve(route);
 
-        let (_, server) = server.bind_with_graceful_shutdown(addr, async {
+        let res = server.try_bind_with_graceful_shutdown(addr, async {
             shutdown.await.ok();
         });
 
-        server.await;
+        match res {
+            Ok((_, server)) => {
+                tracing::info!("Request server bound socket, and starting");
+                server.await;
+            }
+            Err(e) => tracing::error!("{}", e),
+        }
     }
 }
 

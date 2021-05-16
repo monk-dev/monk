@@ -1,6 +1,7 @@
 use colored::*;
 use scraper::{Html, Selector};
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use term_table::{
     row::Row,
     table_cell::{Alignment, TableCell},
@@ -28,7 +29,11 @@ impl Cli {
         let request = match args.subcommand.clone() {
             Subcommand::Config { file } => {
                 let config = Settings::get_settings(file).unwrap();
-                println!("{}", serde_yaml::to_string(&config).unwrap());
+                println!(
+                    "{:?}\n{}",
+                    settings.config_path(),
+                    serde_yaml::to_string(&config).unwrap()
+                );
                 std::process::exit(0);
             }
             Subcommand::DefaultConfig => {
@@ -134,6 +139,23 @@ impl Cli {
             Subcommand::ForceShutdown => Request::ForceShutdown,
             Subcommand::Download { id } => Request::Download { id },
             Subcommand::Open { id, online, .. } => Request::Open { id, online },
+            Subcommand::Export { file, full } => Request::ExportFile {
+                file: PathBuf::from(file),
+                deep_copy: full,
+            },
+            Subcommand::Import { file } => {
+                if file.contains(".zip") {
+                    Request::ImportFile {
+                        file,
+                        deep_copy: true,
+                    }
+                } else {
+                    Request::ImportFile {
+                        file,
+                        deep_copy: false,
+                    }
+                }
+            }
         };
 
         let socket = SocketAddr::new(settings.daemon().address, settings.daemon().port);

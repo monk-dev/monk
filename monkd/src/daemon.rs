@@ -2,6 +2,7 @@ use crate::adapter::Adapter;
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{
+    deep_transfer,
     meta::IndexStatus,
     offline_store::{OfflineStore, Status as OfflineStatus},
     FileStore, Meta,
@@ -13,9 +14,10 @@ use crate::server::{
 use crate::settings::Settings;
 use crate::status::*;
 
+use anyhow::Result;
 use async_channel::Sender;
 use async_lock::Lock;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 
 use tracing::{error, info};
@@ -203,11 +205,9 @@ impl<'s> Daemon<'s> {
         // indexing fails.
         let _ = self.index.write().await.insert_meta(&meta);
 
-        self.store
-            .write()
-            .await
-            .push(meta.clone())
-            .map(|_| Response::Item(meta.clone()))
+        self.store.write().await.push(meta.clone());
+
+        Ok(Response::Item(meta.clone()))
     }
 
     pub async fn handle_index(&mut self, id: String) -> Result<Response, Error> {
@@ -481,6 +481,41 @@ impl<'s> Daemon<'s> {
         }
     }
 
+    pub async fn handle_import_file(
+        &mut self,
+        file: String,
+        deep_copy: bool,
+    ) -> Result<Response, Error> {
+        if deep_copy {
+            let mut fs = self.store.write().await;
+            let mut os = self.offline.write().await;
+            deep_transfer::import_deep_copy(file, &mut *fs, &mut *os)?;
+        } else {
+            self.store.write().await.import_file(file)?;
+        }
+        Ok(Response::Ok)
+    }
+
+    #[allow(unused_variables)]
+    pub async fn handle_export_file(
+        &self,
+        file: PathBuf,
+        deep_copy: bool,
+    ) -> Result<Response, Error> {
+        if deep_copy {
+            deep_transfer::export_deep_copy(file)?;
+            Ok(Response::Ok)
+        } else {
+            match self.store.read().await.write_file(file.clone()) {
+                Ok(_) => Ok(Response::Custom(format!(
+                    "Monk store exported to: {:?}",
+                    file
+                ))),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
     pub async fn handle_request(&mut self, req: Request) -> Result<Response, Error> {
         tracing::info!("handling request: {:?}", req);
 
@@ -498,7 +533,7 @@ impl<'s> Daemon<'s> {
             Request::Download { id } => self.handle_download(id).await,
             Request::Open { id, online } => self.handle_open(id, online).await,
             Request::UpdateMeta(m) => {
-                self.store.write().await.update(m.id().to_string(), m)?;
+                self.store.write().await.update(&m.id().to_string(), m)?;
                 Ok(Response::Ok)
             }
             Request::UpdateOffline(o) => {
@@ -510,6 +545,12 @@ impl<'s> Daemon<'s> {
             Request::IndexAll { tags } => self.handle_index_all(tags).await,
             Request::Status { kind } => self.handle_status(kind).await,
             Request::Search { count, query } => self.handle_search(query, count).await,
+            Request::ImportFile { file, deep_copy } => {
+                self.handle_import_file(file, deep_copy).await
+            }
+            Request::ExportFile { file, deep_copy } => {
+                self.handle_export_file(file, deep_copy).await
+            }
             r => {
                 tracing::warn!("Unimplemented Daemon Request: {:?}", r);
                 Ok(Response::Unhandled)

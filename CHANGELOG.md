@@ -9,3 +9,6 @@
 * Added a [LICENSE](monkd/LICENSE) (AGPLv3) to `monkd`
 * Added descriptions to both `Cargo.toml`s
 * Added a [CHANGELOG.md](CHANGELOG.md)
+
+## 0.3.0
+* Monk now uses Uuids

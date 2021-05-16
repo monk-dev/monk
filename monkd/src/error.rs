@@ -2,6 +2,7 @@ use config::ConfigError;
 use thiserror::Error;
 use tokio::sync::oneshot::error::RecvError;
 use url::ParseError;
+use zip::result::ZipError;
 
 use crate::metadata::Meta;
 
@@ -41,6 +42,8 @@ pub enum Error {
     Utf8Conversion(#[from] std::string::FromUtf8Error),
     #[error("Tokio join error: {0}")]
     JoinHandle(#[from] tokio::task::JoinError),
+    #[error("Zip-rs error: {0}")]
+    ZipError(#[from] ZipError),
     #[error("Custom: {0}")]
     Custom(String),
 }

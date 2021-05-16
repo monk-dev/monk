@@ -1,7 +1,7 @@
 [package]
 name = "monkd"
 version = "0.2.0"
-authors = ["Fisher Darling <fdarlingco@gmail.com>"]
+authors = ["Fisher Darling <fdarlingco@gmail.com>", "Liam Warfield <liam.warfield@gmail.com>"]
 description = "monkd manages a list of information that you want to later search, summarize, and open offline"
 license = "AGPL-3.0"
 repository="https://gitlab.com/fisherdarling/monk"
@@ -22,7 +22,7 @@ serde_json = "*"
 serde_yaml = "*"
 rand = "0.7.3"
 tracing = "*"
-tracing-subscriber = { version = "*", default-features = false, features = ["fmt", "parking_lot", "ansi"] }
+tracing-subscriber = { version = "*", default-features = false, features = ["fmt", "parking_lot", "ansi", "env-filter"] }
 tracing-futures = "*"
 tracing-appender = "*"
 config = "*"
@@ -34,6 +34,10 @@ reqwest = "0.11.1"
 directories-next = "*"
 async-trait = "*"
 scraper = "*"
+zip = { version = "0.5.11", default-features = false, features = ["deflate"] }
+walkdir = "2.3.1"
+tempfile = "3.2.0"
+uuid = "0.8.2"
 
 [package.metadata.deb]
 maintainer = "Fisher Darling <fdarling@mines.edu>"

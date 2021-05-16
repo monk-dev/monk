@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 
 use crate::server::request::Edit;
 
@@ -43,7 +43,8 @@ impl FileStore {
         }
     }
 
-    pub fn push(&mut self, meta: Meta) -> Result<(), Error> {
+    #[instrument(level = "debug", skip(self))]
+    pub fn push(&mut self, meta: Meta) {
         self.dirty = true;
         if !meta.tags.is_empty() {
             for tag in meta.tags.iter() {
@@ -57,7 +58,6 @@ impl FileStore {
             }
         }
         self.metadata.push(meta);
-        Ok(())
     }
 
     pub fn file(&self) -> &Path {
@@ -72,20 +72,26 @@ impl FileStore {
         &self.tags
     }
 
+    #[instrument(level = "debug", fields(path))]
     pub fn read_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         check_path(&path)?;
+        debug!("Reading FileStore file");
 
         let file = File::open(&path)?;
         let reader = BufReader::new(file);
 
         let mut store: FileStore = serde_json::from_reader(reader)?;
         store.file = path.as_ref().into();
-        // store.metadata.sort_by(|l, r| l.id().cmp(r.id()));
+
+        // This is more me just playing around with tracing
+        tracing::Span::current().record("path", &format!("{:?}", store.file).as_str());
 
         Ok(store)
     }
 
+    #[instrument(level = "debug", skip(self, path))]
     pub fn write_file(&self, path: impl AsRef<Path>) -> Result<(), Error> {
+        dbg!(path.as_ref());
         let file = File::create(path)?;
         let writer = BufWriter::new(file);
 
@@ -94,21 +100,23 @@ impl FileStore {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self), fields(description = description.as_ref()))]
     pub fn get(&self, description: impl AsRef<str>) -> Result<&Meta, Error> {
         let id = self.find_id(&description)?;
         Ok(&self.metadata[id])
     }
 
-    pub fn get_mut(&mut self, description: impl AsRef<str>) -> Result<&mut Meta, Error> {
+    #[instrument(level = "debug", skip(self), fields(description = description.as_ref()))]
+    pub fn get_mut(&mut self, description: &impl AsRef<str>) -> Result<&mut Meta, Error> {
         let id = self.find_id(&description)?;
 
         self.dirty = true;
 
-        // self.metadata.iter().find(|m| m.id() == id.as_ref())
         Ok(&mut self.metadata[id])
     }
 
     // Will not deduplicate if 2 of the same id is passed in
+    #[instrument(level = "debug", skip(self, ids))]
     pub fn get_list<T>(&self, ids: T) -> Vec<Meta>
     where
         T: IntoIterator,
@@ -126,6 +134,7 @@ impl FileStore {
 
     // Takes in a collection of tags and returns all metas that have at least
     // one of the tags in the list. Think union.
+    #[instrument(level = "debug", skip(self, tags))]
     pub fn get_union_tags<T>(&self, tags: T) -> Vec<Meta>
     where
         T: IntoIterator,
@@ -144,11 +153,13 @@ impl FileStore {
 
     // Takes in a colection of tags and returns all metas that have all
     // tags passed in. think intersect
+    #[instrument(level = "debug", skip(self, tags))]
     pub fn get_intersection_tags<T>(&self, tags: T) -> Vec<Meta>
     where
         T: IntoIterator,
         T::Item: ToString,
     {
+        debug!("Getting metas with intersection of tags");
         let mut ids: BTreeSet<String> = BTreeSet::new();
         let mut is_first = true;
 
@@ -168,11 +179,13 @@ impl FileStore {
         self.get_list(ids)
     }
 
+    #[instrument(level = "debug")]
     pub fn index(&self, idx: usize) -> &Meta {
         &self.metadata[idx]
     }
 
-    pub fn update(&mut self, id: impl AsRef<str>, data: Meta) -> Result<(), Error> {
+    #[instrument(level = "debug", skip(self), fields(id = id.as_ref()))]
+    pub fn update(&mut self, id: &impl AsRef<str>, data: Meta) -> Result<(), Error> {
         if id.as_ref() != data.id {
             return Err(Error::UnequalIds);
         }
@@ -185,6 +198,7 @@ impl FileStore {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self), fields(description = description.as_ref()))]
     pub fn edit(&mut self, description: &impl AsRef<str>, edit: &Edit) -> Result<Meta, Error> {
         let id: usize = self.find_id(&description)?;
 
@@ -220,6 +234,7 @@ impl FileStore {
         Ok(self.metadata[id].clone())
     }
 
+    #[instrument(level = "debug", skip(self), fields(description = description.as_ref()))]
     pub fn delete(&mut self, description: impl AsRef<str>) -> Result<Meta, Error> {
         let id = self.find_id(&description)?;
 
@@ -276,6 +291,7 @@ impl FileStore {
         }
     }
 
+    #[instrument(level = "debug", skip(self), fields(description = description.as_ref()))]
     fn find_id(&self, description: &impl AsRef<str>) -> Result<usize, Error> {
         let ids: Vec<usize> = self
             .metadata
@@ -306,6 +322,68 @@ impl FileStore {
             return Err(Error::IdNotFound(description.as_ref().into()));
         }
         Ok(ids[0])
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    pub fn import_file(&mut self, file: String) -> Result<(), Error> {
+        tracing::info!("Importing file {}", file);
+        let fp = Path::new(&file);
+        match FileStore::read_file(fp) {
+            Ok(store) => self.import(store),
+            Err(e) => {
+                tracing::warn!("Import error: {:?}", e);
+                Err(e)
+            }
+        }
+    }
+
+    // This does book keeping for the tag -> id store.
+    // I can't wait to change monk to use a relational database
+    #[instrument(level = "debug", skip(self))]
+    fn union_metas(&mut self, current_meta_id: String, incoming_meta: Meta) -> Result<(), Error> {
+        let current_meta = self.get(&current_meta_id)?;
+        let new_tags: Vec<_> = incoming_meta
+            .tags
+            .difference(&current_meta.tags)
+            .cloned()
+            .collect();
+
+        for tag in new_tags {
+            if let Some(ids) = self.tags.get_mut(&tag) {
+                ids.insert(current_meta_id.clone());
+            } else {
+                let mut id_set = BTreeSet::new();
+                id_set.insert(current_meta_id.clone());
+                self.tags.insert(tag.clone(), id_set);
+            }
+        }
+        let current_meta = self.get_mut(&current_meta_id).unwrap();
+        current_meta.union(&incoming_meta);
+        Ok(())
+    }
+    // TODO: This is a target for when monk gets a relational database
+    // a url -> Id table would be better than this O(nm) iteration here.
+    // Review note, is there something more idiomatic than mut fs
+    #[instrument(level = "debug", skip(self))]
+    pub fn import(&mut self, mut fs: FileStore) -> Result<(), Error> {
+        debug!("Importing Filestore");
+        for meta in fs.metadata.drain(..) {
+            let mut is_unioned = false;
+            let mut id = String::new();
+            for m in self.metadata.iter_mut() {
+                if meta.url() == m.url() {
+                    id = m.id.clone();
+                    is_unioned = true;
+                    break;
+                }
+            }
+            if !is_unioned {
+                self.push(meta);
+            } else {
+                self.union_metas(id, meta)?;
+            }
+        }
+        Ok(())
     }
 }
 

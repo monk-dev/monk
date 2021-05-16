@@ -9,7 +9,7 @@ use tokio::sync::oneshot;
 use url::Url;
 
 use crate::{
-    adapter::Adapter,
+    adapter::{Adapter, AdapterSlug},
     error::Error,
     index::Index,
     metadata::{
@@ -64,6 +64,7 @@ impl Adapter for HttpAdapter {
             }
 
             Some(OfflineData {
+                adapter: AdapterSlug::Http,
                 id: meta.id().to_string(),
                 name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
@@ -99,6 +100,7 @@ impl Adapter for HttpAdapter {
             }
 
             let offline_data = offline.unwrap_or_else(|| OfflineData {
+                adapter: AdapterSlug::Http,
                 id: meta.id().to_string(),
                 name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
