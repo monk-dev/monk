@@ -2,7 +2,11 @@
 
 `monk` is a cli and daemon combo that manages articles that you want store and save for a later date.
 
-Currently `monk` can store, list, and download webpages. Planned future features include: easy and automatic git integration, general date-types (not just html), and more data adapters.
+![monk demo](./demo.gif)
+
+Currently `monk` can store, list, and download webpages and youtube videos. 
+Planned future features include: easy and automatic git integration, general date-types (not just html), 
+and syncing articles across multiple computers.
 
 ## Installation
 
@@ -29,16 +33,16 @@ For any subcommand, simply use `--help` to view all available options and descri
 
 ### Adding, downloading, and opening an article:
 ```sh
-$ monk add "AF_XDP" -u https://lwn.net/Articles/750845/ -c "Cool article about fast packet capturing, pretty pictures\!"
-╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
-│   name  │                url                │                 comment                │      date     │      id     │
-├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
-│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
-│         │                                   │ ng, pretty pictures!                   │               │             │
-╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
-$ monk open ls7d2
-status for [ls7d2]: Downloading
-$ monk open njrj
+$ monk add "BPF packet capturing" -u https://lwn.net/Articles/750845/ -c "Cool article about fast packet capturing, pretty pictures\!" -t networking linux
+╭───────────────────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬───────────────────┬─────────────╮
+│          name         │                url                │                 comment                │      date     │        tags       │      id     │
+├───────────────────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼───────────────────┼─────────────┤
+│ BPF packet capturing  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Mar 14, 2021 │ linux, networking │  sf3yghoyj6 │
+│                       │                                   │ ng, pretty pictures\!                  │               │                   │             │
+╰───────────────────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴───────────────────┴─────────────╯
+$ monk open BPF
+status for [BPF]: Downloading
+$ monk open BPF
 ```
 IDs only need to uniquely identify a single item. In this case, a single `n` will work.
 
@@ -50,22 +54,20 @@ Searching for documents in `monk` is relatively straight forward. Once a documen
 
 Since the term "packet" is contained within the comment section of the article, that article is returned:
 ```sh
-$ monk add "AF_XDP" -u https://lwn.net/Articles/750845/ -c "Cool article about fast packet capturing, pretty pictures\!"
-$ monk search packet
-╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
-│   name  │                url                │                 comment                │      date     │      id     │
-├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
-│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
-│         │                                   │ ng, pretty pictures!                   │               │             │
-╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
+$ monk search kernel
+[nzlr7svwpl] AF_XDP: https://lwn.net/Articles/750845/
+processing overhead (to the point that the 4.17 **kernel** will include some painstaking enhancements to the BPF JIT
+
+[sf3yghoyj6] BPF packet capturing: https://lwn.net/Articles/750845/
+pages.  For users who count every nanosecond of packet-processing overhead (to the point that the 4.17 **kernel** will
 ```
 
-To search across the article's _contents_, the article must first be downloaded and then manually indexed.
+Most articles are automatically downloaded and made searchable. You can manually download and index your articles:
 ```sh
-$ monk download ls7d
-$ monk status ls7d
-[ls7d2ypeks]:
-size:     234 B
+$ monk download BPF
+$ monk status BPF
+[sf3yghoyj6]:
+size:     285 B
 index:    not indexed
 offline:  Ready
 $ monk index ls7d    # begin processing the contents
@@ -74,12 +76,7 @@ $ monk index status ls7d
 $ monk index status ls7d
 [njrjdlbd19] Indexed # at this point contents can now be searched
 $ monk search processing bpf interface
-╭─────────┬───────────────────────────────────┬────────────────────────────────────────┬───────────────┬─────────────╮
-│   name  │                url                │                 comment                │      date     │      id     │
-├─────────┼───────────────────────────────────┼────────────────────────────────────────┼───────────────┼─────────────┤
-│ AF_XDP  │ https://lwn.net/Articles/750845/  │ Cool article about fast packet capturi │  Jun 25, 2020 │  ls7d2ypeks │
-│         │                                   │ ng, pretty pictures!                   │               │             │
-╰─────────┴───────────────────────────────────┴────────────────────────────────────────┴───────────────┴─────────────╯
+...
 ```
 
 To simply index everything that's capable of being indexed:
@@ -88,7 +85,7 @@ $ monk index all
 [all] Indexing
 ```
 
-`monk` uses [tantivy](https://github.com/tantivy-search/tantivy) for its full text search needs. The [query grammar](https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html) supports boolean logic, lexical ranges, phrases, etc. Most queries will feel a lot like dumb Google though, and words must be spelled correctly (fuzzy search soon!).
+`monk` uses [tantivy](https://github.com/tantivy-search/tantivy) for its full text search needs. The [query grammar](https://docs.rs/tantivy/0.12.0/tantivy/query/struct.QueryParser.html) supports boolean logic, lexical ranges, phrases, etc. Most queries will feel a lot like dumb Google though, and words must be spelled correctly.
 
 ### Removing an article
 ```sh
@@ -105,6 +102,17 @@ This allows for article names, urls, and comments to be edited.
 ### Listing all saved articles
 ```sh
 $ monk list
+```
+
+You can filter your articles by tags!
+```sh
+$ monk list society
+╭─────────────┬────────────────────────────────────────┬───────────────────────┬───────────────┬─────────┬─────────────╮
+│     name    │                   url                  │        comment        │      date     │   tags  │      id     │
+├─────────────┼────────────────────────────────────────┼───────────────────────┼───────────────┼─────────┼─────────────┤
+│ EV problems │ https://www.youtube.com/watch?v=pLcqJ2 │ Chargers make boi sad │  Mar 14, 2021 │ society │  tzsfgvprl8 │
+│             │ DclEg                                  │                       │               │         │             │
+╰─────────────┴────────────────────────────────────────┴───────────────────────┴───────────────┴─────────┴─────────────╯
 ```
 
 ### Status
@@ -140,6 +148,10 @@ $ monk stop
 
 The daemon will automatically stop after the not receiving a command within `timeout` time (default: 10 seconds). This can be set in the config file.
 
+## Youtube Videos
+If you have `youtube-dl` and `ffmpeg` installed on your system, monk will automatically use youtube-dl to download videos as .mkv files.
+Monk will also use any available closed captioning to make the script of the video searchable.
+
 ## Configuration
 
 Configuration and data is stored in the preferred system folders. For example, on linux it will use the `XDG_*` environment variables to locate and create monk directories. On linux, the config file is located at `~/.config/monk/monkd.yaml`. Data, logs, and documents are stored under `~/.local/share/monk`.
@@ -156,6 +168,9 @@ Monk will automatically create any missing folders and config files that it need
 ## Backing up the Document Store
 
 The only file `monk` needs for recreating its internal state is the `store.json` file, located on linux under: `~/.local/share/monk/store.json`. I recommend creating a git repo in wherever the `store.json` is and commiting and pushing it.
+
+## Matrix Room
+Monk has [matrix room](https://matrix.to/#/!NGQvxXyKlByDvQwXAY:matrix.org?via=matrix.org&via=jnewport.dev&via=hnitbjorg.xyz) (#monk:matrix.org) for chatting about the project.
 
 ## Thank You!
 
