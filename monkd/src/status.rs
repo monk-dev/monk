@@ -16,7 +16,7 @@ pub struct MetaStatus {
 impl MetaStatus {
     pub fn new(meta: &Meta, offline_store: &OfflineStore) -> Result<Self, Error> {
         let bytes_on_disk = calc_meta_bytes(&meta)?;
-        let index_status = meta.index_status.clone();
+        let index_status = meta.index_status;
         let offline_status = offline_store
             .get(meta.id())
             .ok()

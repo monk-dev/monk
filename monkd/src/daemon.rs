@@ -1,4 +1,4 @@
-use crate::adapter::Adapter;
+use crate::adapter::{Adapter, AdapterType};
 use crate::error::Error;
 use crate::index::Index;
 use crate::metadata::{
@@ -50,7 +50,7 @@ impl<'s> Daemon<'s> {
         ) as u64);
 
         let offline_clone = offline.clone();
-        let offline_delay = store_delay.clone();
+        let offline_delay = store_delay;
 
         tokio::spawn(async move { FileStore::commit_loop(store_clone, store_delay).await });
         tokio::spawn(async move { OfflineStore::commit_loop(offline_clone, offline_delay).await });
@@ -63,6 +63,22 @@ impl<'s> Daemon<'s> {
             adapters,
             settings,
         })
+    }
+
+    async fn best_adapter_type(&self, meta: &Meta) -> AdapterType {
+        let mut max_score = 0;
+        // Default adapter is the http addapter
+        let mut ret_val = AdapterType::Http;
+        for adapter in &self.adapters {
+            let inner_adt = adapter.lock().await;
+            let score = inner_adt.score_meta(meta);
+            if score > max_score {
+                max_score = score;
+                ret_val = inner_adt.adt_type();
+            }
+        }
+        info!("ohea: {:?}", ret_val);
+        ret_val
     }
 
     pub fn offline_handle(&self) -> Arc<RwLock<OfflineStore>> {
@@ -222,31 +238,36 @@ impl<'s> Daemon<'s> {
 
         let offline = { self.offline.read().await.get(&id).ok().cloned() };
 
+        let best_adapter = self.best_adapter_type(&meta).await;
+
         for adapter in &mut self.adapters {
-            if adapter.lock().await.will_index(&meta, offline.as_ref()) {
-                let adapter = adapter.clone();
-                let daemon_sender = self.daemon_sender.clone();
-                let index = self.index.clone();
-
-                tokio::spawn(async move {
-                    let mut index = index.write().await;
-                    let mut adapter = adapter.lock().await;
-
-                    if let Some(result) = adapter
-                        .handle_index(&meta, offline.as_ref(), &mut index)
-                        .await
-                    {
-                        // This meta was successfully indexed by this adapter:
-                        if result.is_ok() {
-                            tracing::info!("[{}] indexed", meta.id());
-                            meta.index_status = Some(IndexStatus::Indexed);
-                            let _ = daemon_sender.send((Request::UpdateMeta(meta), None)).await;
-                        }
-                    }
-                });
-
-                return Ok(Response::Ok);
+            let locked_adapter = adapter.lock().await;
+            if locked_adapter.adt_type() != best_adapter {
+                continue;
             }
+            drop(locked_adapter);
+            let adapter = adapter.clone();
+            let daemon_sender = self.daemon_sender.clone();
+            let index = self.index.clone();
+
+            tokio::spawn(async move {
+                let mut index = index.write().await;
+                let mut adapter = adapter.lock().await;
+
+                if let Some(result) = adapter
+                    .handle_index(&meta, offline.as_ref(), &mut index)
+                    .await
+                {
+                    // This meta was successfully indexed by this adapter:
+                    if result.is_ok() {
+                        tracing::info!("[{}] indexed", meta.id());
+                        meta.index_status = Some(IndexStatus::Indexed);
+                        let _ = daemon_sender.send((Request::UpdateMeta(meta), None)).await;
+                    }
+                }
+            });
+
+            return Ok(Response::Ok);
         }
 
         Ok(Response::NoAdapterFound(meta.id().to_string()))
@@ -255,7 +276,7 @@ impl<'s> Daemon<'s> {
     pub async fn handle_index_status(&self, id: String) -> Result<Response, Error> {
         Ok(Response::IndexStatus(
             id.clone(),
-            self.store.read().await.get(&id)?.index_status.clone(),
+            self.store.read().await.get(&id)?.index_status,
         ))
     }
 
@@ -293,13 +314,22 @@ impl<'s> Daemon<'s> {
             let store = self.store.read().await;
             let meta = store.get(&id)?;
 
+            let best_adapter = self.best_adapter_type(&meta).await;
+
             for adapter in &mut self.adapters {
                 let mut adapter = adapter.lock().await;
 
+                if adapter.adt_type() != best_adapter {
+                    continue;
+                }
                 // Get the current offline data if it exists, or initialize it.
                 let data = if let Ok(data) = self.offline.read().await.get(&id) {
                     Some(data.clone())
                 } else {
+                    info!(
+                        "[Download] starting download with {:?} adapter",
+                        best_adapter
+                    );
                     adapter.init_download(Some(&meta), None).await
                 };
 
@@ -336,8 +366,8 @@ impl<'s> Daemon<'s> {
             }
 
             match count {
-                0 => Ok(Response::Custom(format!("no items to download"))),
-                1 => Ok(Response::Custom(format!("downloading 1 item"))),
+                0 => Ok(Response::Custom("no items to download".to_string())),
+                1 => Ok(Response::Custom("downloading 1 item".to_string())),
                 count => Ok(Response::Custom(format!("downloading {} items", count))),
             }
         }
@@ -348,7 +378,7 @@ impl<'s> Daemon<'s> {
 
         let _ = self.offline.write().await.edit(&id, &edit);
 
-        if let Some(_) = edit.url {
+        if edit.url.is_some() {
             let req = Request::Download {
                 id: Some(id.to_string()),
             };

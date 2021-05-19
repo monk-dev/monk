@@ -57,6 +57,8 @@ pub async fn handle(
 
     Ok(match resp.await {
         Ok(r) => json(&r),
-        Err(_) => json(&Response::Error(format!("Error receiving oneshot message"))),
+        Err(_) => json(&Response::Error(
+            "Error receiving oneshot message".to_string(),
+        )),
     })
 }

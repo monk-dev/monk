@@ -1,6 +1,6 @@
 use tantivy::schema::*;
 
-pub static SCHEMA_VERSION: &'static str = "0.1.0";
+pub static SCHEMA_VERSION: &str = "0.1.0";
 
 pub fn create_schema() -> Schema {
     let mut builder: SchemaBuilder = Schema::builder();
