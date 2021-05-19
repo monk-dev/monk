@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 
 pub mod http;
+pub mod youtube;
 
 use crate::error::Error;
 use crate::index::Index;
@@ -9,9 +10,16 @@ use crate::Response;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AdapterSlug {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AdapterType {
     Http,
+    Youtube,
+}
+
+impl Default for AdapterType {
+    fn default() -> Self {
+        AdapterType::Http
+    }
 }
 
 #[async_trait]
@@ -49,8 +57,26 @@ pub trait Adapter: Send {
         None
     }
 
-    fn will_index(&self, meta: &Meta, offline: Option<&OfflineData>) -> bool {
+    // Give a meta and an offline data, can an adapter handle
+    // modifying the off line store for that meta data
+    fn can_modify(&self, meta: &Meta, offline: Option<&OfflineData>) -> bool {
         false
+    }
+
+    /*
+    / This indicates how willing an adapter is to handle some type
+    / meta. The higher the score, the more capable the adapter is
+    / at handling the incoming Meta. For example, a meta might have
+    / a url of "https://www.youtube.com/watch?v=dQw4w9WgXcQ". The http
+    / adapter would return "1" and the youtube adapter would return "5"
+    / because it can handle youtube links better.
+    */
+    fn score_meta(&self, meta: &Meta) -> usize {
+        0
+    }
+
+    fn adt_type(&self) -> AdapterType {
+        AdapterType::Http
     }
 
     async fn handle_index(

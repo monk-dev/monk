@@ -87,7 +87,7 @@ impl Index {
         let docs = &docs?;
 
         let results: Vec<(_, _)> = docs
-            .into_iter()
+            .iter()
             .map(|doc| {
                 (
                     doc.get_first(ID).unwrap().text().unwrap().to_string(),

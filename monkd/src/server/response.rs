@@ -71,10 +71,7 @@ impl From<Snippet> for SnippetDef {
     fn from(item: Snippet) -> Self {
         let mut sections: Vec<HighlightSectionDef> = Vec::new();
         for (start, stop) in item.highlighted().iter().map(|h| h.bounds()) {
-            let highlight = HighlightSectionDef {
-                start: start,
-                stop: stop,
-            };
+            let highlight = HighlightSectionDef { start, stop };
             sections.push(highlight);
         }
         SnippetDef {

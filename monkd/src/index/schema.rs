@@ -1,6 +1,6 @@
 use tantivy::schema::*;
 
-pub static SCHEMA_VERSION: &'static str = "0.0.0";
+pub static SCHEMA_VERSION: &str = "0.0.0";
 
 pub const ID: Field = Field::from_field_id(0);
 pub const NAME: Field = Field::from_field_id(1);

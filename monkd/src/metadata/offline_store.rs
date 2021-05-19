@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::adapter::AdapterSlug;
+use crate::adapter::AdapterType;
 use crate::error::Error;
 use crate::server::request::Edit;
 
@@ -199,11 +199,14 @@ impl OfflineStore {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineData {
-    pub adapter: AdapterSlug,
     pub id: String,
     pub name: Option<String>,
     pub url: Option<Url>,
+    // This is a file or directory that contains offline storage for
+    // an article. Adapters are NOT allowed to store anything outside
+    // of this path
     pub file: Option<PathBuf>,
+    pub adapter: AdapterType,
     pub status: Status,
 }
 
@@ -219,6 +222,10 @@ impl OfflineData {
     pub fn file(&self) -> Option<&Path> {
         self.file.as_deref()
     }
+
+    pub fn adapter(&self) -> AdapterType {
+        self.adapter
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -230,10 +237,7 @@ pub enum Status {
 
 impl Status {
     pub fn is_error(&self) -> bool {
-        match self {
-            Status::Error(_) => true,
-            _ => false,
-        }
+        matches!(self, Status::Error(_))
     }
 }
 
@@ -293,7 +297,7 @@ impl Default for OfflineSettings {
 impl Default for OfflineData {
     fn default() -> Self {
         OfflineData {
-            adapter: AdapterSlug::Http,
+            adapter: AdapterType::Http,
             id: String::new(),
             name: None,
             url: None,

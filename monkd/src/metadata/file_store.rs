@@ -18,7 +18,7 @@ use crate::server::request::Edit;
 use super::Meta;
 use crate::error::Error;
 
-pub const CURRENT_FILE_STORE_VERSION: &'static str = "0.1.0";
+pub const CURRENT_FILE_STORE_VERSION: &str = "0.1.0";
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct FileStore {
@@ -124,10 +124,9 @@ impl FileStore {
     {
         let mut metas = Vec::new();
         for id in ids {
-            match self.get(id) {
-                Ok(m) => metas.push(m.clone()),
-                _ => (),
-            };
+            if let Ok(m) = self.get(id) {
+                metas.push(m.clone())
+            }
         }
         metas
     }
@@ -384,6 +383,14 @@ impl FileStore {
             }
         }
         Ok(())
+    }
+}
+
+impl std::ops::Index<usize> for FileStore {
+    type Output = Meta;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.metadata[idx]
     }
 }
 

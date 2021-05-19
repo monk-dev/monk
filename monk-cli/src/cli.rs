@@ -91,9 +91,9 @@ impl Cli {
             } => Request::Edit {
                 id,
                 edit: Edit {
-                    name: name,
-                    url: url,
-                    comment: comment,
+                    name,
+                    url,
+                    comment,
                     add_tags,
                     remove_tags,
                 },
@@ -190,20 +190,18 @@ pub fn handle_response(args: &Args, response: Response) {
                     "use {} to add a new item",
                     "monk add [-n <name>] -u <url>".yellow(),
                 )
+            } else if args.oneline {
+                print_oneline(items);
             } else {
-                if args.oneline {
-                    print_oneline(items);
-                } else {
-                    print_tabled(items);
-                }
+                print_tabled(items);
             }
         }
         Response::TooManyMeta(id, metas) => print_too_many(id, metas),
         Response::NewId(id) => {
-            println!("[{}] created", id.to_string().bright_purple());
+            println!("[{}] created", id.bright_purple());
         }
         Response::NotFound(id) => {
-            println!("[{}] not found", id.to_string().bright_purple());
+            println!("[{}] not found", id.bright_purple());
             println!(
                 "{} to list all items and IDs in the store",
                 "monk list".yellow()
@@ -212,34 +210,26 @@ pub fn handle_response(args: &Args, response: Response) {
         Response::NoAdapterFound(id) => {
             println!(
                 "An adapter that could handle [{}] could not be found.",
-                id.to_string().bright_purple()
+                id.bright_purple()
             );
         }
         Response::MetaOfflineStatus(id, status) => {
-            println!(
-                "status for [{}]: {:?}",
-                id.to_string().bright_purple(),
-                status
-            );
+            println!("status for [{}]: {:?}", id.bright_purple(), status);
         }
         Response::IndexStatus(id, status) => {
             println!(
                 "[{}] {}",
-                id.to_string().bright_purple(),
+                id.bright_purple(),
                 status
                     .map(|s| format!("{:?}", s))
                     .unwrap_or_else(|| "not indexed".into())
             );
         }
         Response::Indexing(id) => {
-            println!("[{}] indexing", id.to_string().bright_purple());
+            println!("[{}] indexing", id.bright_purple());
         }
         Response::OpenStatus(id, status) => {
-            println!(
-                "[{}] cannot be opened: {:?}",
-                id.to_string().bright_purple(),
-                status
-            );
+            println!("[{}] cannot be opened: {:?}", id.bright_purple(), status);
         }
         Response::Open(path) => {
             open::that(path).unwrap();
@@ -260,12 +250,10 @@ pub fn handle_response(args: &Args, response: Response) {
 
             if items.is_empty() {
                 println!("No matches found");
+            } else if args.oneline {
+                print_oneline(items.into_iter().map(|m| m.0).collect());
             } else {
-                if args.oneline {
-                    print_oneline(items.into_iter().map(|m| m.0).collect());
-                } else {
-                    print_search(items);
-                }
+                print_search(items);
             }
         }
         Response::Custom(string) => {
@@ -310,17 +298,14 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
     table.max_column_width = 40;
     table.style = TableStyle::rounded();
 
-    let mut row = Vec::new();
-    row.push(TableCell::new_with_alignment("name", 1, Alignment::Center));
-    row.push(TableCell::new_with_alignment("url", 1, Alignment::Center));
-    row.push(TableCell::new_with_alignment(
-        "comment",
-        1,
-        Alignment::Center,
-    ));
-    row.push(TableCell::new_with_alignment("date", 1, Alignment::Center));
-    row.push(TableCell::new_with_alignment("tags", 1, Alignment::Center));
-    row.push(TableCell::new_with_alignment("id", 1, Alignment::Center));
+    let row: Vec<TableCell> = vec![
+        TableCell::new_with_alignment("name", 1, Alignment::Center),
+        TableCell::new_with_alignment("url", 1, Alignment::Center),
+        TableCell::new_with_alignment("comment", 1, Alignment::Center),
+        TableCell::new_with_alignment("date", 1, Alignment::Center),
+        TableCell::new_with_alignment("tags", 1, Alignment::Center),
+        TableCell::new_with_alignment("id", 1, Alignment::Center),
+    ];
     // row.push(TableCell::new_with_alignment(
     //     "last opened",
     //     1,
@@ -336,7 +321,9 @@ pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
             Alignment::Left,
         ));
         row.push(TableCell::new_with_alignment(
-            meta.url().map(|u| u.to_string()).unwrap_or("".into()),
+            meta.url()
+                .map(|u| u.to_string())
+                .unwrap_or_else(|| "".into()),
             1,
             Alignment::Left,
         ));
@@ -395,10 +382,9 @@ fn print_search(results: Vec<(Meta, SnippetDef)>) {
         // If the snippet length is 0, that mean the match was on the comment or title
         // of the artical. This is because Tantivy does not store comments in
         // the index, and cannot create a snippet.
-        if snippet.fragment().len() == 0 {
-            match meta.comment() {
-                Some(s) => print!("{}", s.blue()),
-                _ => (),
+        if snippet.fragment().is_empty() {
+            if let Some(c) = meta.comment() {
+                print!("{}", c.blue())
             }
             return;
         }
@@ -512,9 +498,7 @@ fn print_status(status: StatusResponse) {
 
 fn get_byte_unit(bytes: usize) -> byte_unit::AdjustedByte {
     let byte = byte_unit::Byte::from_bytes(bytes as u128);
-    let adjusted = byte.get_appropriate_unit(false);
-
-    adjusted
+    byte.get_appropriate_unit(false)
 }
 
 pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
@@ -525,10 +509,10 @@ pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
     let mut system = sysinfo::System::new_all();
     system.refresh_all();
 
-    if let None = system
+    if !system
         .get_processes()
         .iter()
-        .find(|(_pid, proc)| proc.name() == "monkd")
+        .any(|(_pid, proc)| proc.name() == "monkd")
     {
         // println!("Spawning the daemon");
 

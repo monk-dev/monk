@@ -1,11 +1,15 @@
 use async_channel::Sender;
 use async_trait::async_trait;
-use std::path::PathBuf;
+use std::fs::{create_dir_all, read_dir};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::str;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 use tokio::sync::oneshot;
+use tracing::{info, instrument};
 use url::Url;
 
 use crate::{
@@ -13,7 +17,6 @@ use crate::{
     error::Error,
     index::Index,
     metadata::{
-        monolith,
         offline_store::{OfflineData, Status},
         Meta,
     },
@@ -21,29 +24,36 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct HttpAdapter {
+pub struct YoutubeAdapter {
     sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
     in_flight: Arc<AtomicUsize>,
     offline_folder: PathBuf,
 }
 
-impl HttpAdapter {
+impl YoutubeAdapter {
     pub fn new(
         offline_folder: PathBuf,
         sender: Sender<(Request, Option<oneshot::Sender<Response>>)>,
     ) -> Self {
-        tracing::info!("Created HTTP Adapter");
-
+        info!("[Youtube] Created Youtube Adapter");
         Self {
             sender,
             in_flight: Arc::new(AtomicUsize::new(0)),
             offline_folder,
         }
     }
+
+    pub fn yt_dl_installed() -> bool {
+        Command::new("youtube-dl")
+            .arg("-h")
+            .stdout(Stdio::null())
+            .spawn()
+            .is_ok()
+    }
 }
 
 #[async_trait]
-impl Adapter for HttpAdapter {
+impl Adapter for YoutubeAdapter {
     async fn init_download(
         &mut self,
         meta: Option<&Meta>,
@@ -68,7 +78,7 @@ impl Adapter for HttpAdapter {
                 name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
                 file: None,
-                adapter: AdapterType::Http,
+                adapter: AdapterType::Youtube,
                 status: Status::Downloading,
             })
         } else {
@@ -76,6 +86,7 @@ impl Adapter for HttpAdapter {
         }
     }
 
+    #[instrument(skip(self, offline))]
     async fn handle_download<'s, 'a>(
         &'s mut self,
         meta: Option<&'a Meta>,
@@ -84,10 +95,6 @@ impl Adapter for HttpAdapter {
         if let Some(meta) = meta {
             if !valid_url(meta.url()) {
                 return None;
-            }
-
-            if meta.url().is_none() {
-                return Some(Ok(Response::Error(format!("`{}` has no url", meta.id()))));
             }
 
             if let Some(ref offline) = offline {
@@ -104,7 +111,7 @@ impl Adapter for HttpAdapter {
                 name: meta.name().map(ToOwned::to_owned),
                 url: meta.url().cloned(),
                 file: None,
-                adapter: AdapterType::Http,
+                adapter: AdapterType::Youtube,
                 status: Status::Downloading,
             });
 
@@ -117,7 +124,7 @@ impl Adapter for HttpAdapter {
                 semaphore.fetch_add(1, Ordering::SeqCst);
                 match download_meta(meta, offline_folder, offline_data).await {
                     Ok(new_data) => {
-                        tracing::info!("sending updated offline_data: {:?}", new_data);
+                        info!("sending updated offline_data: {:?}", new_data);
                         if let Err(e) = sender.send((Request::UpdateOffline(new_data), None)).await
                         {
                             tracing::error!("{}", e);
@@ -141,20 +148,29 @@ impl Adapter for HttpAdapter {
         valid_url(meta.url()) && offline.map(|o| o.file().is_some()).unwrap_or_default()
     }
 
+    fn score_meta(&self, meta: &Meta) -> usize {
+        info!("[Youtube] score name: {:?}  url: {:?}", meta.name, meta.url);
+        if valid_url(meta.url()) {
+            info!("5");
+            5
+        } else {
+            info!("0");
+            0
+        }
+    }
+
+    #[instrument(skip(self, index))]
     async fn handle_index(
         &mut self,
         meta: &Meta,
         offline: Option<&OfflineData>,
         index: &mut Index,
     ) -> Option<Result<(), Error>> {
-        use scraper::{Html, Selector};
-
-        tracing::info!("[http] indexing: {}", meta.id());
-
         let offline = offline?;
-        let path = offline.file()?;
+        // TODO: make this less janky
+        let path = offline.file()?.parent()?.join(meta.id.clone() + ".en.vtt");
 
-        let data = match std::fs::read_to_string(path) {
+        let data = match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(e) => {
                 tracing::warn!("Could not read file into string {:?}", path);
@@ -169,41 +185,18 @@ impl Adapter for HttpAdapter {
             return Some(Err(e));
         }
 
-        tracing::info!("[http] scraping: {}", meta.id());
-
-        let document = Html::parse_document(&data);
-        let p_tag = Selector::parse("body p").unwrap();
-
-        let mut body_data = String::with_capacity(512);
-
-        for paragraph in document.select(&p_tag) {
-            for text in paragraph.text() {
-                body_data.push_str(text);
-            }
-        }
-
-        // TODO: selector for <meta name="description" content="***">
-        let title_selector = Selector::parse("title").unwrap();
-        let title = document
-            .select(&title_selector)
-            .next()
-            .map(|node| node.inner_html());
-
-        tracing::info!("[http] indexing: {}", meta.id());
-
         Some(
             index
-                .insert_meta_with_data(meta, title.as_deref(), Some(&body_data), None)
+                .insert_meta_with_data(meta, meta.name(), Some(&data), None)
                 .map(|_| ()),
         )
     }
 
+    #[instrument(skip(self))]
     async fn shutdown(&mut self) -> Result<(), Error> {
-        tracing::info!("Shutting down Http Adapter");
-
         let in_flight = self.in_flight.load(Ordering::Relaxed);
         if in_flight != 0 {
-            tracing::info!("Downloads in flight: {}", in_flight)
+            info!("Downloads in flight: {}", in_flight)
         }
 
         loop {
@@ -213,22 +206,25 @@ impl Adapter for HttpAdapter {
             }
         }
 
-        tracing::info!("Finished shutting down Http Adapter");
+        info!("Finished shutting down Youtube Adapter");
 
         Ok(())
     }
+
+    fn adt_type(&self) -> AdapterType {
+        AdapterType::Youtube
+    }
 }
 
+#[instrument(skip(data))]
 async fn download_meta(
     meta: Meta,
     offline_folder: PathBuf,
     mut data: OfflineData,
 ) -> Result<OfflineData, Error> {
-    tracing::info!("[HTTP] download_meta: {:?}", meta.url());
+    info!("[Youtube] download_meta: {:?}", meta.url());
 
-    match tokio::task::spawn_blocking(move || monolith::download_meta(&meta, offline_folder))
-        .await?
-    {
+    match tokio::task::spawn_blocking(move || download_youtube(&meta, offline_folder)).await? {
         Ok(path) => {
             data.status = Status::Ready;
             data.file = Some(path);
@@ -241,10 +237,62 @@ async fn download_meta(
     Ok(data)
 }
 
+#[instrument(level = "debug")]
 pub fn valid_url(url: Option<&Url>) -> bool {
     if let Some(url) = url {
-        url.scheme() != "https" || url.scheme() != "http"
+        if let Some(domain) = url.domain() {
+            if (domain.ends_with("youtube.com") || domain.ends_with("youtu.be"))
+                && YoutubeAdapter::yt_dl_installed()
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+#[instrument(skip(folder))]
+fn download_youtube(meta: &Meta, folder: impl AsRef<Path>) -> Result<PathBuf, Error> {
+    let filename = meta.id();
+    let folder = folder.as_ref().join(meta.id.clone());
+    if read_dir(&folder).is_err() && create_dir_all(&folder).is_err() {
+        return Err(Error::FileStoreNoPath);
+    }
+    let file_path = folder.join(filename);
+    tracing::info!("[youtube] Download path {:?}", file_path);
+    let url_str;
+    if let Some(url) = &meta.url {
+        url_str = url.as_str();
     } else {
-        false
+        return Err(Error::Custom("Youtube-dl error".to_string()));
+    }
+
+    let mut available_subs = Command::new("youtube-dl");
+    available_subs.arg(url_str).arg("--list-subs");
+    let out = str::from_utf8(available_subs.output()?.stdout.as_slice())
+        .unwrap()
+        .to_string();
+    let subs_command;
+    if out.contains("Available subtitles") {
+        subs_command = "--write-sub"
+    } else if out.contains("Available automatic captions") {
+        subs_command = "--write-auto-sub"
+    } else {
+        subs_command = "-q";
+        info!("Video {:?} does not have subs", meta.name);
+    }
+
+    match Command::new("youtube-dl")
+        .arg(url_str)
+        .arg("--recode-video")
+        .arg("mkv")
+        .arg(subs_command)
+        .arg("-o")
+        .arg(&file_path)
+        .stdout(Stdio::null())
+        .output()
+    {
+        Ok(_) => Ok(folder.join(meta.id.clone() + ".mkv")),
+        _ => Err(Error::Custom("Youtube-dl error".to_string())),
     }
 }

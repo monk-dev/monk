@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
-use crate::adapter::AdapterSlug;
+use crate::adapter::AdapterType;
 use crate::error::Error;
 use crate::index::settings::IndexSettings;
 use crate::metadata::{file_store::StoreSettings, offline_store::OfflineSettings};
@@ -14,7 +14,7 @@ pub struct Settings {
     offline: OfflineSettings,
     index: IndexSettings,
     log_dir: PathBuf,
-    adapters: Vec<AdapterSlug>,
+    adapters: Vec<AdapterType>,
     #[serde(skip)]
     config_path: PathBuf,
 }
@@ -25,41 +25,39 @@ impl Settings {
         let mut cpath = PathBuf::new();
 
         let config_path: Option<PathBuf> = if let Some(path) = config_path {
-            Some(path.into())
+            Some(path)
+        } else if let Some(dirs) = crate::get_dirs() {
+            use std::{fs::metadata, io::ErrorKind};
+
+            let path = dirs.config_dir().join("monkd.yaml");
+
+            let _meta = match metadata(&path) {
+                Ok(_) => {}
+                Err(e) if e.kind() == ErrorKind::NotFound => {
+                    use std::{
+                        fs::{create_dir_all, File},
+                        io::Write,
+                    };
+
+                    tracing::info!("creating default config in: {}", path.display());
+
+                    create_dir_all(&path.parent().unwrap())?;
+
+                    // File doesn't exist, so create default settings
+                    // and write it there:
+                    let default = Settings::default();
+                    let mut file = File::create(&path).unwrap();
+                    file.write_all(serde_yaml::to_string(&default).unwrap().as_bytes())?;
+                }
+                Err(_e) => {
+                    println!("error getting metadata for {}", path.display());
+                    std::process::exit(1);
+                }
+            };
+
+            Some(path)
         } else {
-            if let Some(dirs) = crate::get_dirs() {
-                use std::{fs::metadata, io::ErrorKind};
-
-                let path = dirs.config_dir().join("monkd.yaml");
-
-                let _meta = match metadata(&path) {
-                    Ok(_) => {}
-                    Err(e) if e.kind() == ErrorKind::NotFound => {
-                        use std::{
-                            fs::{create_dir_all, File},
-                            io::Write,
-                        };
-
-                        tracing::info!("creating default config in: {}", path.display());
-
-                        create_dir_all(&path.parent().unwrap())?;
-
-                        // File doesn't exist, so create default settings
-                        // and write it there:
-                        let default = Settings::default();
-                        let mut file = File::create(&path).unwrap();
-                        file.write_all(serde_yaml::to_string(&default).unwrap().as_bytes())?;
-                    }
-                    Err(_e) => {
-                        println!("error getting metadata for {}", path.display());
-                        std::process::exit(1);
-                    }
-                };
-
-                Some(path)
-            } else {
-                None
-            }
+            None
         };
 
         let mut config = Config::default();
@@ -102,7 +100,7 @@ impl Settings {
         &self.index
     }
 
-    pub fn adapters(&self) -> &[AdapterSlug] {
+    pub fn adapters(&self) -> &[AdapterType] {
         &self.adapters
     }
 
@@ -120,7 +118,7 @@ impl Default for Settings {
                 offline: Default::default(),
                 index: Default::default(),
                 log_dir: dirs.data_dir().join("logs"),
-                adapters: vec![AdapterSlug::Http],
+                adapters: vec![AdapterType::Http, AdapterType::Youtube],
                 config_path: PathBuf::new(),
             }
         } else {
@@ -130,7 +128,7 @@ impl Default for Settings {
                 offline: Default::default(),
                 index: Default::default(),
                 log_dir: "./logs".into(),
-                adapters: vec![AdapterSlug::Http],
+                adapters: vec![AdapterType::Http, AdapterType::Youtube],
                 config_path: PathBuf::new(),
             }
         }
