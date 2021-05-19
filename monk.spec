@@ -1,5 +1,5 @@
 Name:           monk
-Version:        0.2m0
+Version:        0.3.0
 Release:        1
 Summary:        A cli for storing webpages for future consumption.
 License:        AGPL-3.0

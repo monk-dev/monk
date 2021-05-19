@@ -1,6 +1,6 @@
 [package]
 name = "monk-cli"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>", "Liam Warfield <liam.warfield@gmail.com>"]
 edition = "2018"
 description = ""

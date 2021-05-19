@@ -1,6 +1,6 @@
 [package]
 name = "monkd"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>", "Liam Warfield <liam.warfield@gmail.com>"]
 description = "monkd manages a list of information that you want to later search, summarize, and open offline"
 license = "AGPL-3.0"
