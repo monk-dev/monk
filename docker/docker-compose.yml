@@ -1,0 +1,44 @@
+
+version: '3.6'
+
+services:
+  db:
+    image: postgres:latest
+    hostname: db
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=monk
+    volumes:
+      - "../migrations:/migrations"
+    ports:
+      - 5432:5432
+    networks:
+      - monk
+
+  monk-migrate:
+    build: 
+      context: ../
+      dockerfile: docker/monk-migrate.Dockerfile
+    networks:
+      - monk
+
+  api:
+    build:   
+      context: ../
+      dockerfile: docker/api.Dockerfile
+    depends_on:
+      - db
+    environment:
+      - RUST_BACKTRACE=1
+      - RUST_LOG=debug
+      - DATABASE_URL=postgres://admin:password@db/monk
+    ports:
+      - 8080:8080
+    networks:
+      - monk
+
+networks:
+  monk:
+    driver: bridge

@@ -1,0 +1,7 @@
+%syntax-version=1.0.0
+%project=monk
+
+db 2021-06-03T02:45:25Z Fisher Darling <fisher@hyperion> # create the schema
+articles [db] 2021-06-03T02:47:05Z Fisher Darling <fisher@hyperion> # main article store
+tags [db] 2021-06-03T03:16:37Z Fisher Darling <fisher@hyperion> # tags for articles
+article_tag [articles tags] 2021-06-03T03:18:27Z Fisher Darling <fisher@hyperion> # xref table for tags on articles
