@@ -2,7 +2,7 @@
 version: '3.6'
 
 services:
-  db:
+  monk-db:
     image: postgres:latest
     hostname: db
     restart: always
@@ -15,21 +15,34 @@ services:
     ports:
       - 5432:5432
     networks:
-      - monk
+      - monk-net
 
-  monk-migrate:
-    build: 
-      context: ../
-      dockerfile: docker/monk-migrate.Dockerfile
+  # monk-migrate:
+  #   build: 
+  #     context: ../
+  #     dockerfile: docker/monk-migrate.Dockerfile
+  #   networks:
+  #     - monk-net
+
+  monk-graphql:
+    build:
+      context: ../graphql
+      dockerfile: ../docker/monk-graphql.Dockerfile
+    image: monk-graphql
+    env_file: ../graphql/.env
+    depends_on:
+      - monk-db
     networks:
-      - monk
+      - monk-net
+    ports:
+      - 5433:5433
 
-  api:
+  monk-server:
     build:   
       context: ../
-      dockerfile: docker/api.Dockerfile
+      dockerfile: docker/monk-server.Dockerfile
     depends_on:
-      - db
+      - monk-db
     environment:
       - RUST_BACKTRACE=1
       - RUST_LOG=debug
@@ -37,8 +50,8 @@ services:
     ports:
       - 8080:8080
     networks:
-      - monk
+      - monk-net
 
 networks:
-  monk:
+  monk-net:
     driver: bridge

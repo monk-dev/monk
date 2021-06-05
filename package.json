@@ -1,0 +1,25 @@
+{
+  "name": "monk",
+  "version": "0.4.0",
+  "description": "monk monk monk",
+  "main": "index.js",
+  "repository": "https://gitlab.com/fisherdarling/monk.git",
+  "author": "Fisher Darling",
+  "contributors": [
+    "Liam Warfield <liam.warfield@gmail.com>"
+  ],
+  "license": "NA",
+  "private": false,
+  "dependencies": {
+    "@graphile-contrib/pg-many-to-many": "^1.0.1",
+    "@graphile-contrib/pg-simplify-inflector": "^6.1.0",
+    "postgraphile": "^4.12.3"
+  },
+  "scripts": {
+    "gql": "npx postgraphile -c postgres://admin:password@localhost:5432/monk --watch --enhance-graphiql --append-plugins @graphile-contrib/pg-simplify-inflector --simple-collections only",
+    "reload": "./scripts/reload.sh",
+    "reploy": "./scripts/redeploy_db.sh",
+    "up": "./scripts/up.sh",
+    "down": "./scripts/down.sh"
+  }
+}

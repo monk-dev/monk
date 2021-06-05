@@ -1,0 +1,11 @@
+{
+  "name": "graphql",
+  "version": "0.0.1",
+  "description": "Postgraphile Server",
+  "main": "server.js",
+  "license": "MIT",
+  "dependencies": {
+    "@graphile-contrib/pg-simplify-inflector": "^6.1.0",
+    "postgraphile": "^4.12.3"
+  }
+}

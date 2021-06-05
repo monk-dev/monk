@@ -1,9 +1,9 @@
-INSERT INTO tags (id, tag) VALUES 
+INSERT INTO tag (id, tag) VALUES 
     ('6400203e-c41d-11eb-8887-5f942429a808', 'rust'), 
     ('6b6a7b58-c41d-11eb-a5c2-379cf2feed72', 'linux'), 
     ('6f620f14-c41d-11eb-8302-e347c88a909c', 'cool');
 
-INSERT INTO articles (id, name, description, url) VALUES
+INSERT INTO article (id, name, description, url) VALUES
     ('77fb3d58-c41d-11eb-a4b0-37f7c8707735', 'Accelerating networking with AF_XDP', 'Cool article on network capturing', 'https://lwn.net/Articles/750845/'),
     ('9246b3b8-c41d-11eb-884d-87d7cb7249ed', 'Making our own executable packer', 'Deep dive into ELF', 'https://fasterthanli.me/series/making-our-own-executable-packer');
 

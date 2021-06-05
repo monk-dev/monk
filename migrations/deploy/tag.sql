@@ -3,7 +3,7 @@
 
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS public.tags
+CREATE TABLE IF NOT EXISTS public.tag
 (
     id                  uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     tag                 text        NOT NULL,

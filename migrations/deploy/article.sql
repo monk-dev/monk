@@ -5,7 +5,7 @@ BEGIN;
 
 SET client_min_messages TO WARNING;
 
-CREATE TABLE IF NOT EXISTS public.articles
+CREATE TABLE IF NOT EXISTS public.article
 (
     id                  uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     name                text        NOT NULL,

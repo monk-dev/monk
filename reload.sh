@@ -1,2 +1,0 @@
-./down.sh
-./up.sh
