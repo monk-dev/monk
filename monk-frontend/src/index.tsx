@@ -1,30 +1,98 @@
-import React from "react";
-import { render } from "react-dom";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 
 import {
-    ApolloClient,
-    InMemoryCache,
-    ApolloProvider,
-    useQuery,
-    gql
+  ApolloClient,
+  InMemoryCache,
+  ApolloProvider,
+  useQuery,
+  gql
 } from "@apollo/client";
 
-const client = new ApolloClient({
-    uri: 'http://localhost:5433/graphql',
-    cache: new InMemoryCache()
-});
+import Article from "./Article";
+import './monk.css'
 
-render(<h1>Hello, World!</h1>, document.getElementById("root"));
-
-client
-    .query({
-        query: gql`
-      query MyQuery {
-  article(id: "77fb3d58-c41d-11eb-a4b0-37f7c8707735") {
-    id
-    name
+let getArticlesQuery = gql`
+query MyQuery {
+  articlesConnection {
+    nodes {
+      id
+      name
+      url
+    }
   }
 }
-    `
-    })
-    .then(result => console.log(result));
+
+`
+
+const client = new ApolloClient({
+  uri: 'http://localhost:5433/graphql',
+  cache: new InMemoryCache()
+});
+
+
+type Props = {
+  name: string,
+};
+
+type State = {
+  rawjson: string,
+  articles: typeof Article[],
+};
+
+class ArticleTable extends React.Component<Props, State> {
+  state = { rawjson: "ohea", articles: [] };
+  message: string;
+
+  loadArticles = (graphqlResponce: any) => {
+    const message = JSON.stringify(graphqlResponce);
+    const newArticles: typeof Article[] = graphqlResponce["data"]["articlesConnection"]["nodes"].map((node) => {
+      const props = {
+        id: node["id"],
+        url: node["url"],
+        name: node["name"],
+      };
+      return Article(props);
+    });
+    if (this.state.rawjson !== message) {
+      this.setState((state) => ({
+        rawjson: message,
+        articles: newArticles,
+      }));
+    }
+  }
+
+  render() {
+    client
+      .query({
+        query: getArticlesQuery
+      })
+      .then(result => this.loadArticles(result));
+
+
+    return (
+      <div>
+        <h1>Monk</h1>
+        <table>
+          <tr>
+            <th>Name</th>
+            <th>Url</th>
+            <th>Id</th>
+            <th></th>
+          </tr>
+          {this.state.articles}
+        </table>
+      </div >
+    )
+  }
+}
+
+
+
+ReactDOM.render(<ArticleTable name="rtns" />, document.getElementById('root'))
+
+client
+  .query({
+    query: getArticlesQuery
+  })
+  .then(result => console.log(result));
