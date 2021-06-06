@@ -16,10 +16,7 @@
     "postgraphile": "^4.12.3"
   },
   "scripts": {
-    "gql": "npx postgraphile -c postgres://admin:password@localhost:5432/monk --watch --enhance-graphiql --append-plugins @graphile-contrib/pg-simplify-inflector --simple-collections only",
     "reload": "./scripts/reload.sh",
-    "reploy": "./scripts/redeploy_db.sh",
-    "up": "./scripts/up.sh",
-    "down": "./scripts/down.sh"
+    "reploy": "./scripts/redeploy_db.sh"
   }
 }

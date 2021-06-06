@@ -16,9 +16,9 @@ http
             appendPlugins: [PgSimplifyInflectorPlugin],
 
             graphileBuildOptions: {
-                pgOmitListSuffix: true,
+                pgOmitListSuffix: true
             },
-
+            enableCors: true,
             watchPg: true,
             graphiql: true,
             enhanceGraphiql: true,

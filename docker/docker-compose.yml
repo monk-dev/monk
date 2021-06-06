@@ -26,10 +26,10 @@ services:
 
   monk-graphql:
     build:
-      context: ../graphql
+      context: ../monk-graphql
       dockerfile: ../docker/monk-graphql.Dockerfile
     image: monk-graphql
-    env_file: ../graphql/.env
+    env_file: ../monk-graphql/.env
     depends_on:
       - monk-db
     networks:
