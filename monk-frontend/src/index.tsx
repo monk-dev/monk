@@ -10,7 +10,10 @@ import {
 } from "@apollo/client";
 
 import Article from "./Article";
+import ArticleCard from './ArticleCard'
 import './monk.css'
+// Import all plugins
+import * as bootstrap from 'bootstrap';
 
 let getArticlesQuery = gql`
 query MyQuery {
@@ -22,7 +25,19 @@ query MyQuery {
     }
   }
 }
+`
 
+let getArticleCardsQuery = gql`
+query CardInfo {
+  articlesConnection {
+    nodes {
+      description
+      id
+      name
+      url
+    }
+  }
+}
 `
 
 const client = new ApolloClient({
@@ -37,11 +52,13 @@ type Props = {
 
 type State = {
   rawjson: string,
+  cardView: boolean,
   articles: typeof Article[],
+  articleCards: typeof ArticleCard[],
 };
 
 class ArticleTable extends React.Component<Props, State> {
-  state = { rawjson: "ohea", articles: [] };
+  state = { rawjson: "ohea", cardView: false, articles: [], articleCards: [] };
   message: string;
 
   loadArticles = (graphqlResponce: any) => {
@@ -62,28 +79,77 @@ class ArticleTable extends React.Component<Props, State> {
     }
   }
 
+  loadArticleCards = (graphqlResponce: any) => {
+    const message = JSON.stringify(graphqlResponce);
+    const newArticleCards: typeof ArticleCard[] = graphqlResponce["data"]["articlesConnection"]["nodes"].map((node) => {
+      const props = {
+        id: node["id"],
+        url: node["url"],
+        name: node["name"],
+        desc: node["description"],
+        imageLoc: "https://media.tenor.com/images/bedf3f73ec3ecc20a941b86e548a8f23/tenor.gif"
+      };
+      return ArticleCard(props);
+    });
+    if (this.state.rawjson !== message) {
+      this.setState((state) => ({
+        rawjson: message,
+        articleCards: newArticleCards,
+      }));
+    }
+  }
+
+  handle_mode_change = () => {
+    this.setState((state) => ({
+      cardView: !state.cardView,
+    }))
+  }
+
   render() {
-    client
-      .query({
-        query: getArticlesQuery
-      })
-      .then(result => this.loadArticles(result));
+
+    if (this.state.cardView) {
+      client
+        .query({
+          query: getArticleCardsQuery
+        })
+        .then(result => this.loadArticleCards(result));
+      return (
+        <div>
+          <h1 className="display-1">Monk</h1>
+          <button onClick={this.handle_mode_change} >Change View</button>
+          <div className="container d-flex justify-content-center ">
+            <div className="row row-cols-3">{this.state.articleCards}</div>
+          </div>
+        </div >
+      )
+    } else {
+      client
+        .query({
+          query: getArticlesQuery
+        })
+        .then(result => this.loadArticles(result));
 
 
-    return (
-      <div>
-        <h1>Monk</h1>
-        <table>
-          <tr>
-            <th>Name</th>
-            <th>Url</th>
-            <th>Id</th>
-            <th></th>
-          </tr>
-          {this.state.articles}
-        </table>
-      </div >
-    )
+      return (
+        <div>
+          <h1>Monk</h1>
+          <button onClick={this.handle_mode_change} >Change View</button>
+          <table className="table table-hover">
+            <thead>
+              <tr key="top">
+                <th>Name</th>
+                <th>Url</th>
+                <th>Id</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {this.state.articles}
+            </tbody>
+          </table >
+        </div >
+      )
+    }
   }
 }
 
