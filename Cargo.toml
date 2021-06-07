@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "monk-server",
+    "monk-types",
+    "monk-graphql",
+]
