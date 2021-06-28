@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 tracing = "*"
 tracing-subscriber = "*"
-async-graphql = { version = "*", features = ["tracing", "log", "chrono", "chrono-tz", "url", "uuid"] }
+async-graphql = { version = "2.8.6", features = ["tracing", "log", "chrono", "chrono-tz", "url", "uuid"] }
+async-graphql-actix-web = "2.8.6"

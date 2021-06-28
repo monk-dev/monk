@@ -3,4 +3,5 @@ members = [
     "monk-server",
     "monk-types",
     "monk-graphql",
+    "monk-db",
 ]
