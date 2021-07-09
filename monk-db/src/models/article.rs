@@ -7,9 +7,9 @@ use tracing::info;
 use url::Url;
 use uuid::Uuid;
 
-use crate::{models::article_tag::AddTagToArticle, Error};
+use crate::{connection::DbConn, models::article_tag::AddTagToArticle, Error};
 
-use super::{tag::Tag, DbConn};
+use super::tag::Tag;
 
 static ARTICLE_COLUMNS: &'static str = "id, name, description, url, created_at";
 
@@ -40,6 +40,15 @@ impl Article {
         conn.prepare(&query)?
             .query_row([id], Article::from_row)
             .map_err(Into::into)
+    }
+
+    pub fn all(conn: &Connection) -> Result<Vec<Self>, Error> {
+        let query = format!("SELECT {} FROM article", ARTICLE_COLUMNS);
+
+        Ok(conn
+            .prepare(&query)?
+            .query_map([], Article::from_row)?
+            .collect::<Result<Vec<_>, _>>()?)
     }
 
     pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {

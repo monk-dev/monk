@@ -8,7 +8,7 @@ use crate::Error;
 
 use super::article::Article;
 
-static TAG_COLUMNS: &'static str = "id, name";
+static TAG_COLUMNS: &'static str = "id, name, created_at";
 
 pub static TABLE: &'static str = r#"
 CREATE TABLE IF NOT EXISTS tag (
@@ -49,7 +49,7 @@ impl Tag {
 
     pub fn tags_for_article(conn: &Connection, article_id: &Uuid) -> Result<Vec<Tag>, Error> {
         let query = format!(
-            "SELECT {} FROM tag t INNER JOIN article a on t.id=a.article_id WHERE a.id=?",
+            "SELECT {} FROM tag WHERE id in (SELECT tag_id FROM article_tag WHERE article_id=?)",
             TAG_COLUMNS
         );
 
@@ -60,7 +60,7 @@ impl Tag {
     }
 
     pub fn create_table(conn: &Connection) -> Result<(), Error> {
-        info!("Creating Table: tag");
+        info!("creating table");
         conn.execute(TABLE, [])?;
         Ok(())
     }
@@ -93,7 +93,7 @@ impl InsertTag {
         info!("adding tag");
 
         let query = format!(
-            "INSERT INTO tag ({}) VALUES (?, ?, ?, ?) RETURNING {}",
+            "INSERT INTO tag ({}) VALUES (?, ?, ?) RETURNING {}",
             TAG_COLUMNS, TAG_COLUMNS,
         );
 

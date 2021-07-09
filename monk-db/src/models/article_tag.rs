@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::Error;
 
-static TAG_ARTICLE_COLUMNS: &'static str = "id, article_id, tag_id, created_at";
+static ARTICLE_TAG_COLUMNS: &'static str = "id, article_id, tag_id, created_at";
 
 pub static TABLE: &'static str = r#"
 CREATE TABLE IF NOT EXISTS article_tag (
@@ -20,7 +20,7 @@ pub struct ArticleTag;
 
 impl ArticleTag {
     pub fn create_table(conn: &Connection) -> Result<(), Error> {
-        info!("Creating Table: tag_article");
+        info!("Creating Table: ARTICLE_TAG");
         conn.execute(TABLE, [])?;
         Ok(())
     }
@@ -44,7 +44,7 @@ impl<'a, 't> AddTagToArticle<'a, 't> {
     }
 
     pub fn create_table(conn: &Connection) -> Result<(), Error> {
-        info!("Creating Table: tag_article");
+        info!("creating table");
         conn.execute(TABLE, [])?;
         Ok(())
     }
@@ -56,8 +56,8 @@ impl<'a, 't> AddTagToArticle<'a, 't> {
         info!("adding tag to article");
 
         let query = format!(
-            "INSERT INTO tag ({}) VALUES (?, ?, ?, ?) RETURNING {}",
-            TAG_ARTICLE_COLUMNS, TAG_ARTICLE_COLUMNS,
+            "INSERT INTO article_tag ({}) VALUES (?, ?, ?, ?)",
+            ARTICLE_TAG_COLUMNS,
         );
 
         conn.prepare(&query)?.execute(params![
