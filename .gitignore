@@ -3,3 +3,4 @@
 **/.parcel-cache
 **/dist
 matrix_store
+monk.db

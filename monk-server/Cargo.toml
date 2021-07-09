@@ -15,7 +15,7 @@ async-graphql = { verison = "2.9.7", features = ["url", "uuid", "tracing"] }
 
 tracing = "*"
 tracing-subscriber = "*"
-matrix-sdk = { git="https://github.com/matrix-org/matrix-rust-sdk.git", features = ["encryption", "sled_cryptostore"] }
+# matrix-sdk = { git="https://github.com/matrix-org/matrix-rust-sdk.git", features = ["encryption", "sled_cryptostore"] }
 dirs = "3.0.2"
 tokio = { version = "^1.6", features= ["full"] }
 anyhow = "1.0.40"
