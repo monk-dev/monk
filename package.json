@@ -17,6 +17,6 @@
   },
   "scripts": {
     "reload": "./scripts/reload.sh",
-    "reploy": "./scripts/redeploy_db.sh"
+    "redeploy": "./scripts/redeploy_db.sh"
   }
 }
