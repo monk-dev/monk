@@ -4,22 +4,20 @@ version = "0.1.0"
 authors = ["Fisher Darling <fdarlingco@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 monk-types = { path = "../monk-types" }
 monk-db = { path = "../monk-db" }
 
 rusqlite = { version = "0.25.3", features = ["bundled", "url", "chrono", "uuid"] }
-async-graphql = { verison = "2.9.7", features = ["url", "uuid", "tracing"] }
+async-graphql = { version = "2.9.7", features = ["url", "uuid", "tracing"] }
+async-graphql-actix-web = "2.9.7"
 
 tracing = "*"
 tracing-subscriber = "*"
-# matrix-sdk = { git="https://github.com/matrix-org/matrix-rust-sdk.git", features = ["encryption", "sled_cryptostore"] }
 dirs = "3.0.2"
 tokio = { version = "^1.6", features= ["full"] }
 anyhow = "1.0.40"
 thiserror = "1.0.25"
 derive_more = "0.99.14"
 actix-web = "3.3.2"
-async-graphql-actix-web = "2.9.7"
+actix-cors = "0.5.4"

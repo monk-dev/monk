@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 rusqlite = { version = "0.25.3", features = ["bundled", "url", "chrono", "uuid"] }
+async-graphql = { version = "2.9.7", features = ["url", "uuid", "tracing"] }
 
 tracing = "*"
 tracing-subscriber = "*"
@@ -18,5 +19,4 @@ thiserror = "1.0.25"
 derive_more = "0.99.14"
 uuid = "0.8.2"
 chrono = "0.4.19"
-async-graphql = "2.9.4"
 url = "2.2.2"

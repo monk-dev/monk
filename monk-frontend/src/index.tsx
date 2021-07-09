@@ -17,26 +17,22 @@ import './monk.css';
 import * as bootstrap from 'bootstrap';
 
 let getArticlesQuery = gql`
-query MyQuery {
-  articlesConnection {
-    nodes {
-      id
-      name
-      url
-    }
+query AllArticles {
+  articles {
+    id
+    name
+    url
   }
 }
 `
 
 let getArticleCardsQuery = gql`
 query CardInfo {
-  articlesConnection {
-    nodes {
-      description
-      id
-      name
-      url
-    }
+  articles {
+    id
+    name
+    description
+    url
   }
 }
 `
@@ -44,7 +40,7 @@ query CardInfo {
 
 
 const client = new ApolloClient({
-  uri: 'http://localhost:5433/graphql',
+  uri: 'http://localhost:5555/graphql/',
   cache: new InMemoryCache()
 });
 
@@ -66,11 +62,11 @@ class App extends React.Component<Props, State> {
 
   loadArticles = (graphqlResponce: any) => {
     const message = JSON.stringify(graphqlResponce);
-    const newArticles: typeof Article[] = graphqlResponce["data"]["articlesConnection"]["nodes"].map((node) => {
+    const newArticles: typeof Article[] = graphqlResponce["data"]["articles"].map((article) => {
       const props = {
-        id: node["id"],
-        url: node["url"],
-        name: node["name"],
+        id: article["id"],
+        url: article["url"],
+        name: article["name"],
       };
       return Article(props);
     });
@@ -84,12 +80,12 @@ class App extends React.Component<Props, State> {
 
   loadArticleCards = (graphqlResponce: any) => {
     const message = JSON.stringify(graphqlResponce);
-    const newArticleCards: typeof ArticleCard[] = graphqlResponce["data"]["articlesConnection"]["nodes"].map((node) => {
+    const newArticleCards: typeof ArticleCard[] = graphqlResponce["data"]["articles"].map((article) => {
       const props = {
-        id: node["id"],
-        url: node["url"],
-        name: node["name"],
-        desc: node["description"],
+        id: article["id"],
+        url: article["url"],
+        name: article["name"],
+        desc: article["description"],
         imageLoc: "https://media.tenor.com/images/bedf3f73ec3ecc20a941b86e548a8f23/tenor.gif"
       };
       return ArticleCard(props);

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_graphql::{ComplexObject, Context, Result as GQLResult, SimpleObject};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, Row};

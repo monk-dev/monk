@@ -1,3 +1,5 @@
+#![allow(unreachable_code)]
+
 use async_graphql::{ComplexObject, Result as GQLResult, SimpleObject};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, Row};
