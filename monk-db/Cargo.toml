@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 rusqlite = { version = "0.25.3", features = ["bundled", "url", "chrono", "uuid"] }
-async-graphql = { version = "2.9.7", features = ["url", "uuid", "tracing"] }
+async-graphql = { version = "2.9.7", features = ["url", "uuid", "tracing", "chrono"] }
 
 tracing = "*"
 tracing-subscriber = "*"
@@ -20,3 +20,4 @@ derive_more = "0.99.14"
 uuid = "0.8.2"
 chrono = "0.4.19"
 url = "2.2.2"
+# rust-argon2 = "0.8.3"

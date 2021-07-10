@@ -1,5 +1,5 @@
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 
-use crate::query::Query;
+use crate::{mutation::Mutation, query::Query};
 
-pub type MonkSchema = Schema<Query, EmptyMutation, EmptySubscription>;
+pub type MonkSchema = Schema<Query, Mutation, EmptySubscription>;

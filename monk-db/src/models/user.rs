@@ -37,15 +37,6 @@ impl Tag {
             .map_err(Into::into)
     }
 
-    pub fn load_ids(conn: &Connection, ids: &[Uuid]) -> Result<Vec<Self>, Error> {
-        let mut tags = Vec::new();
-        for id in ids {
-            tags.push(Tag::get(conn, id)?);
-        }
-
-        Ok(tags)
-    }
-
     pub fn insert(name: impl Into<String>) -> InsertTag {
         InsertTag::new(name)
     }

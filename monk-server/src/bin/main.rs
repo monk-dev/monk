@@ -7,11 +7,11 @@ use async_graphql::{
     EmptyMutation, EmptySubscription, Schema,
 };
 use async_graphql_actix_web::{Request, Response};
-use monk_db::{graphql::MonkSchema, init_db, query::Query};
+use monk_db::{graphql::MonkSchema, init_db, mutation::Mutation, query::Query};
 use tracing::info;
 use tracing_subscriber::{util::SubscriberInitExt, EnvFilter};
 
-#[post("/graphql/")]
+#[post("/graphql")]
 async fn graphql(schema: web::Data<MonkSchema>, req: Request) -> Response {
     schema.execute(req.into_inner()).await.into()
 }
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let db_conn = init_db("monk.db")?;
     info!("DB Conn: {:?}", db_conn);
 
-    let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
+    let schema = Schema::build(Query, Mutation, EmptySubscription)
         .data(db_conn)
         .extension(Tracing)
         .finish();

@@ -3,6 +3,7 @@ pub mod connection;
 pub mod error;
 pub mod graphql;
 pub mod models;
+pub mod mutation;
 pub mod query;
 
 use std::path::Path;
@@ -12,15 +13,16 @@ use rusqlite::Connection;
 use tracing::info;
 
 pub use crate::error::Error;
-use crate::models::{article::Article, article_tag::ArticleTag, tag::Tag};
+use crate::models::{article::Article, tag::Tag};
+
+static SCHEMA: &'static str = include_str!("./schema.sql");
 
 #[tracing::instrument(skip(path), fields(db_path=%path.as_ref().display()))]
 pub fn init_db(path: impl AsRef<Path>) -> Result<DbConn, Error> {
     let conn = Connection::open(path)?;
 
-    Article::create_table(&conn)?;
-    Tag::create_table(&conn)?;
-    ArticleTag::create_table(&conn)?;
+    info!("creating schema");
+    conn.execute_batch(&SCHEMA)?;
 
     #[cfg(debug_assertions)]
     seed(&conn)?;

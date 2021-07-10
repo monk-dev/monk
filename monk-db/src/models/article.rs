@@ -5,7 +5,12 @@ use tracing::info;
 use url::Url;
 use uuid::Uuid;
 
-use crate::{connection::DbConn, models::article_tag::AddTagToArticle, Error};
+use crate::{
+    connection::DbConn,
+    models::article_tag::AddTagToArticle,
+    mutation::{self, input::UpdateArticleInput},
+    Error,
+};
 
 use super::tag::Tag;
 
@@ -26,7 +31,7 @@ CREATE TABLE IF NOT EXISTS article (
 pub struct Article {
     pub id: Uuid,
     pub name: String,
-    pub url: Url,
+    pub url: Option<Url>,
     pub description: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -47,6 +52,35 @@ impl Article {
             .prepare(&query)?
             .query_map([], Article::from_row)?
             .collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn update(conn: &Connection, input: &UpdateArticleInput) -> Result<Self, Error> {
+        let query = format!(
+            r#"
+            UPDATE article
+                SET name = COALESCE(?, name),
+                    description = COALESCE(?, description),
+                    url = COALESCE(?, url)
+            WHERE
+                id = ?
+            RETURNING {};
+        "#,
+            ARTICLE_COLUMNS
+        );
+
+        Ok(conn.prepare(&query)?.query_row(
+            params![input.name, input.description, input.url, input.id],
+            Article::from_row,
+        )?)
+    }
+
+    pub fn delete(conn: &Connection, id: &Uuid) -> Result<Self, Error> {
+        let query = format!(
+            "DELETE FROM article WHERE id=? RETURNING {}",
+            ARTICLE_COLUMNS
+        );
+
+        Ok(conn.prepare(&query)?.query_row([id], Article::from_row)?)
     }
 
     pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
