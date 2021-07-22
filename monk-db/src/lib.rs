@@ -9,8 +9,9 @@ pub mod query;
 use std::path::Path;
 
 use connection::DbConn;
-use rusqlite::Connection;
+use rusqlite::{functions::FunctionFlags, Connection};
 use tracing::info;
+use uuid::Uuid;
 
 pub use crate::error::Error;
 use crate::models::{article::Article, tag::Tag};
@@ -21,11 +22,16 @@ static SCHEMA: &'static str = include_str!("./schema.sql");
 pub fn init_db(path: impl AsRef<Path>) -> Result<DbConn, Error> {
     let conn = Connection::open(path)?;
 
+    add_uuid_function(&conn)?;
+
     info!("creating schema");
     conn.execute_batch(&SCHEMA)?;
 
     #[cfg(debug_assertions)]
     seed(&conn)?;
+
+    let count = conn.execute("INSERT INTO article (name) VALUES (\"It's a name!\")", [])?;
+    info!("count: {}", count);
 
     Ok(DbConn::new(conn))
 }
@@ -53,6 +59,39 @@ pub fn seed(conn: &Connection) -> Result<(), Error> {
         .url("https://github.com/alessandrod/aya".parse().unwrap())
         .tags(&[linux, rust])
         .execute(&conn)?;
+
+    Ok(())
+}
+
+// fn add_regexp_function(db: &Connection) -> Result<()> {
+//     db.create_scalar_function(
+//         "regexp",
+//         2,
+//         FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+//         move |ctx| {
+//             assert_eq!(ctx.len(), 2, "called with unexpected number of arguments");
+//             let regexp: Arc<Regex> = ctx.get_or_create_aux(0, |vr| -> Result<_, BoxError> {
+//                 Ok(Regex::new(vr.as_str()?)?)
+//             })?;
+//             let is_match = {
+//                 let text = ctx
+//                     .get_raw(1)
+//                     .as_str()
+//                     .map_err(|e| Error::UserFunctionError(e.into()))?;
+
+//                 regexp.is_match(text)
+//             };
+
+//             Ok(is_match)
+//         },
+//     )
+// }
+
+fn add_uuid_function(db: &Connection) -> Result<(), Error> {
+    db.create_scalar_function("uuid", 0, FunctionFlags::empty(), |_| {
+        let id = Uuid::new_v4();
+        Ok(id.as_bytes().to_vec())
+    })?;
 
     Ok(())
 }

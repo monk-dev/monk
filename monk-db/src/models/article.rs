@@ -15,6 +15,7 @@ use crate::{
 use super::tag::Tag;
 
 static ARTICLE_COLUMNS: &'static str = "id, name, description, url, created_at";
+static ARTICLE_INSERT_COLUMNS: &'static str = "name, description, url, created_at";
 
 pub static TABLE: &'static str = r#"
 CREATE TABLE IF NOT EXISTS article (
@@ -113,7 +114,6 @@ impl Article {
 }
 
 pub struct InsertArticle {
-    id: Uuid,
     name: String,
     description: Option<String>,
     url: Option<Url>,
@@ -124,7 +124,6 @@ pub struct InsertArticle {
 impl InsertArticle {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
-            id: Uuid::new_v4(),
             name: name.into(),
             url: None,
             description: None,
@@ -153,28 +152,23 @@ impl InsertArticle {
         self
     }
 
-    #[tracing::instrument(skip(self, conn), fields(article.id=%self.id, article.name=%self.name))]
+    #[tracing::instrument(skip(self, conn), fields(article.name=%self.name))]
     pub fn execute(self, conn: &Connection) -> Result<Article, Error> {
         info!("adding article");
 
         let query = format!(
-            "INSERT INTO article ({}) VALUES (?, ?, ?, ?, ?) RETURNING {}",
-            ARTICLE_COLUMNS, ARTICLE_COLUMNS,
+            "INSERT INTO article ({}) VALUES (?, ?, ?, ?) RETURNING {}",
+            ARTICLE_INSERT_COLUMNS, ARTICLE_COLUMNS
         );
 
         let inserted = conn.prepare(&query)?.query_row(
-            params![
-                &self.id,
-                self.name,
-                self.description,
-                self.url,
-                self.created_at
-            ],
+            params![self.name, self.description, self.url, self.created_at],
             Article::from_row,
         )?;
 
+        info!(article.id=%inserted.id, "inserted");
         for tag in self.tags {
-            AddTagToArticle::new(&self.id, &tag.id).execute(conn)?;
+            AddTagToArticle::new(&inserted.id, &tag.id).execute(conn)?;
         }
 
         Ok(inserted)

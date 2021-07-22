@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rusqlite = { version = "0.25.3", features = ["bundled", "url", "chrono", "uuid"] }
+rusqlite = { version = "0.25.3", features = ["bundled", "url", "chrono", "uuid", "functions"] }
 async-graphql = { version = "2.9.7", features = ["url", "uuid", "tracing", "chrono"] }
 
 tracing = "*"

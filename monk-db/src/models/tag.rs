@@ -11,6 +11,7 @@ use crate::Error;
 use super::article::Article;
 
 static TAG_COLUMNS: &'static str = "id, name, created_at";
+static TAG_INSERT_COLUMNS: &'static str = "name, created_at";
 
 pub static TABLE: &'static str = r#"
 CREATE TABLE IF NOT EXISTS tag (
@@ -85,7 +86,6 @@ impl Tag {
 }
 
 pub struct InsertTag {
-    id: Uuid,
     name: String,
     created_at: DateTime<Utc>,
 }
@@ -93,23 +93,22 @@ pub struct InsertTag {
 impl InsertTag {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
-            id: Uuid::new_v4(),
             name: name.into(),
             created_at: Utc::now(),
         }
     }
 
-    #[tracing::instrument(skip(self, conn), fields(tag.id=%self.id, tag.name=%self.name))]
+    #[tracing::instrument(skip(self, conn), fields(tag.name=%self.name))]
     pub fn execute(self, conn: &Connection) -> Result<Tag, Error> {
         info!("adding tag");
 
         let query = format!(
-            "INSERT INTO tag ({}) VALUES (?, ?, ?) RETURNING {}",
-            TAG_COLUMNS, TAG_COLUMNS,
+            "INSERT INTO tag ({}) VALUES (?, ?) RETURNING {}",
+            TAG_INSERT_COLUMNS, TAG_COLUMNS
         );
 
         conn.prepare(&query)?
-            .query_row(params![&self.id, self.name, self.created_at], Tag::from_row)
+            .query_row(params![&self.name, self.created_at], Tag::from_row)
             .map_err(Into::into)
     }
 }

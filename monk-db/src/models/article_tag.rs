@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::Error;
 
 static ARTICLE_TAG_COLUMNS: &'static str = "id, article_id, tag_id, created_at";
+static ARTICLE_TAG_INSERT_COLUMNS: &'static str = "article_id, tag_id, created_at";
 
 pub static TABLE: &'static str = r#"
 CREATE TABLE IF NOT EXISTS article_tag (
@@ -27,7 +28,6 @@ impl ArticleTag {
 }
 
 pub struct AddTagToArticle<'a, 't> {
-    id: Uuid,
     article_id: &'a Uuid,
     tag_id: &'t Uuid,
     created_at: DateTime<Utc>,
@@ -36,7 +36,6 @@ pub struct AddTagToArticle<'a, 't> {
 impl<'a, 't> AddTagToArticle<'a, 't> {
     pub fn new(article_id: &'a Uuid, tag_id: &'t Uuid) -> Self {
         Self {
-            id: Uuid::new_v4(),
             article_id,
             tag_id,
             created_at: Utc::now(),
@@ -56,16 +55,12 @@ impl<'a, 't> AddTagToArticle<'a, 't> {
         info!("adding tag to article");
 
         let query = format!(
-            "INSERT INTO article_tag ({}) VALUES (?, ?, ?, ?)",
-            ARTICLE_TAG_COLUMNS,
+            "INSERT INTO article_tag ({}) VALUES (?, ?, ?)",
+            ARTICLE_TAG_INSERT_COLUMNS,
         );
 
-        conn.prepare(&query)?.execute(params![
-            &self.id,
-            self.article_id,
-            self.tag_id,
-            self.created_at
-        ])?;
+        conn.prepare(&query)?
+            .execute(params![self.article_id, self.tag_id, self.created_at])?;
 
         Ok(())
     }
