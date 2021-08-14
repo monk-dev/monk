@@ -172,6 +172,9 @@ The only file `monk` needs for recreating its internal state is the `store.json`
 ## Matrix Room
 Monk has [matrix room](https://matrix.to/#/!NGQvxXyKlByDvQwXAY:matrix.org?via=matrix.org&via=jnewport.dev&via=hnitbjorg.xyz) (#monk:matrix.org) for chatting about the project.
 
+## Supporting
+You can support monk by committing code, solving issues, or by [buying us a coffee](https://www.buymeacoffee.com/lwarfield) (goes to both lwarfield and fdarling)
+
 ## Thank You!
 
 Huge thanks to the [monolith](https://github.com/Y2Z/monolith) project for their amazing web archiving library. It's works incredibly well.
