@@ -1,3 +1,5 @@
+use std::fs::DirEntry;
+
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -76,8 +78,13 @@ impl OfflineStoreStatus {
         let mut bytes_on_disk = 0;
 
         for entry in read_dir(offline_store.file())? {
-            let metadata = entry?.metadata()?;
-            bytes_on_disk += metadata.len() as usize;
+            match entry {
+                // This should really be the job of the adapter
+                Ok(entry) => {
+                    bytes_on_disk += get_size(entry);
+                }
+                Err(_) => (),
+            }
         }
 
         Ok(Self {
@@ -85,6 +92,22 @@ impl OfflineStoreStatus {
             bytes_on_disk,
         })
     }
+}
+
+// Recursively gets size of a file
+fn get_size(entry: DirEntry) -> usize {
+    use std::fs::read_dir;
+    let mut size = 0;
+    if entry.file_type().unwrap().is_dir() {
+        for f in read_dir(entry.path()).unwrap() {
+            size += get_size(f.unwrap());
+        }
+    } else {
+        let metadata = entry.metadata().unwrap();
+        size += metadata.len() as usize;
+    }
+
+    size
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
