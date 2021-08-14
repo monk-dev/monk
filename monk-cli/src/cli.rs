@@ -510,7 +510,7 @@ pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {
     system.refresh_all();
 
     if !system
-        .get_processes()
+        .processes()
         .iter()
         .any(|(_pid, proc)| proc.name() == "monkd")
     {

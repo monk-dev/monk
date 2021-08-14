@@ -1,4 +1,4 @@
-use monolith::html::{html_to_dom, stringify_document, walk_and_embed_assets};
+use monolith::html::{html_to_dom, serialize_document, walk_and_embed_assets};
 use monolith::opts::Options;
 use monolith::utils::retrieve_asset;
 use reqwest::blocking::Client;
@@ -31,6 +31,7 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
             no_audio: false,
             base_url: Some(url.to_string()),
             no_css: false,
+            charset: Some("UTF-8".to_string()),
             ignore_errors: false,
             no_frames: false,
             no_fonts: false,
@@ -46,6 +47,7 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
             no_video: false,
             target: fp_str,
             no_color: false,
+            unwrap_noscript: false,
         };
 
         let mut cache = HashMap::new();
@@ -64,16 +66,16 @@ pub fn download_meta(meta: &Meta, store: impl AsRef<Path>) -> Result<PathBuf, Er
 
         tracing::info!("[{}] Retrieving asset: {}", meta.id(), url.as_str());
 
-        let (data, _final_url, _media_type) =
-            retrieve_asset(&mut cache, &client, url.as_str(), url.as_str(), &opts, 1)?;
+        let (data, _final_url, _media_type, char_set) =
+            retrieve_asset(&mut cache, &client, &url, &url, &opts, 1)?;
 
-        let dom = html_to_dom(&String::from_utf8(data)?);
+        let dom = html_to_dom(&data, char_set.clone());
 
         tracing::info!("[{}] Embedding asset: {}", meta.id(), url.as_str());
 
-        walk_and_embed_assets(&mut cache, &client, url.as_str(), &dom.document, &opts, 1);
+        walk_and_embed_assets(&mut cache, &client, url, &dom.document, &opts, 1);
 
-        let html: String = stringify_document(&dom.document, &opts);
+        let html: Vec<u8> = serialize_document(dom, char_set, &opts);
 
         tracing::info!(
             "[{}] document file_path: {}",
