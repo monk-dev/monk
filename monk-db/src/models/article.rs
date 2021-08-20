@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use async_graphql::{ComplexObject, Context, Result as GQLResult, SimpleObject};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, Row};
@@ -5,32 +7,19 @@ use tracing::info;
 use url::Url;
 use uuid::Uuid;
 
-use crate::{
-    connection::DbConn,
-    models::article_tag::AddTagToArticle,
-    mutation::{self, input::UpdateArticleInput},
-    Error,
-};
+use crate::{connection::DbConn, mutation::input::UpdateArticleInput, Error};
 
 use super::tag::Tag;
 
-static ARTICLE_COLUMNS: &'static str = "id, name, description, url, created_at";
-static ARTICLE_INSERT_COLUMNS: &'static str = "name, description, url, created_at";
-
-pub static TABLE: &'static str = r#"
-CREATE TABLE IF NOT EXISTS article (
-    id          UUID    NOT NULL PRIMARY KEY,
-    name        STRING  NOT NULL,
-    description STRING,
-    url         URL,
-    created_at  INT     NOT NULL
-);
-"#;
+static ARTICLE_COLUMNS: &'static str = "id, user_id, name, description, url, created_at";
+static ARTICLE_INSERT_COLUMNS: &'static str = "user_id, name, description, url, created_at";
+static ARTICLE_TAG_INSERT_COLUMNS: &'static str = "article_id, tag_id, created_at";
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, SimpleObject)]
 #[graphql(complex)]
 pub struct Article {
     pub id: Uuid,
+    pub user_id: Option<Uuid>,
     pub name: String,
     pub url: Option<Url>,
     pub description: Option<String>,
@@ -53,6 +42,20 @@ impl Article {
             .prepare(&query)?
             .query_map([], Article::from_row)?
             .collect::<Result<Vec<_>, _>>()?)
+    }
+
+    pub fn add_tag(&self, conn: &Connection, tag_id: &Uuid) -> Result<(), Error> {
+        info!("adding tag to article");
+
+        let query = format!(
+            "INSERT INTO article_tag ({}) VALUES (?, ?, ?)",
+            ARTICLE_TAG_INSERT_COLUMNS,
+        );
+
+        conn.prepare(&query)?
+            .execute(params![self.id, tag_id, self.created_at])?;
+
+        Ok(())
     }
 
     pub fn update(conn: &Connection, input: &UpdateArticleInput) -> Result<Self, Error> {
@@ -84,24 +87,19 @@ impl Article {
         Ok(conn.prepare(&query)?.query_row([id], Article::from_row)?)
     }
 
+    pub fn insert(name: impl Into<String>) -> InsertArticle {
+        InsertArticle::new(name)
+    }
+
     pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
         Ok(Article {
             id: row.get("id")?,
+            user_id: row.get("user_id")?,
             name: row.get("name")?,
             url: row.get("url")?,
             description: row.get("description")?,
             created_at: row.get("created_at")?,
         })
-    }
-
-    pub fn insert(name: impl Into<String>) -> InsertArticle {
-        InsertArticle::new(name)
-    }
-
-    pub fn create_table(conn: &Connection) -> Result<(), Error> {
-        info!("Creating Table: article");
-        conn.execute(TABLE, [])?;
-        Ok(())
     }
 }
 
@@ -114,22 +112,31 @@ impl Article {
 }
 
 pub struct InsertArticle {
+    user_id: Option<Uuid>,
     name: String,
     description: Option<String>,
     url: Option<Url>,
-    tags: Vec<Tag>,
+    tags: HashSet<Uuid>,
+    namespaces: HashSet<Uuid>,
     created_at: DateTime<Utc>,
 }
 
 impl InsertArticle {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
+            user_id: None,
             name: name.into(),
             url: None,
             description: None,
-            tags: Vec::new(),
+            tags: HashSet::new(),
+            namespaces: HashSet::new(),
             created_at: Utc::now(),
         }
+    }
+
+    pub fn user(mut self, user_id: &Uuid) -> Self {
+        self.user_id = Some(user_id.clone());
+        self
     }
 
     pub fn url(mut self, url: Url) -> Self {
@@ -142,13 +149,23 @@ impl InsertArticle {
         self
     }
 
-    pub fn tag(mut self, tag: &Tag) -> Self {
-        self.tags.push(tag.clone());
+    pub fn tag(mut self, tag: &Uuid) -> Self {
+        self.tags.insert(tag.clone());
         self
     }
 
-    pub fn tags(mut self, tags: &[Tag]) -> Self {
-        self.tags.extend_from_slice(tags);
+    pub fn tags(mut self, tags: &[Uuid]) -> Self {
+        self.tags.extend(tags.iter());
+        self
+    }
+
+    pub fn namespace(mut self, namespace: &Uuid) -> Self {
+        self.namespaces.insert(namespace.clone());
+        self
+    }
+
+    pub fn namespaces(mut self, namespaces: &[Uuid]) -> Self {
+        self.namespaces.extend(namespaces.iter());
         self
     }
 
@@ -157,20 +174,26 @@ impl InsertArticle {
         info!("adding article");
 
         let query = format!(
-            "INSERT INTO article ({}) VALUES (?, ?, ?, ?) RETURNING {}",
+            "INSERT INTO article ({}) VALUES (?, ?, ?, ?, ?) RETURNING {}",
             ARTICLE_INSERT_COLUMNS, ARTICLE_COLUMNS
         );
 
-        let inserted = conn.prepare(&query)?.query_row(
-            params![self.name, self.description, self.url, self.created_at],
+        let article = conn.prepare(&query)?.query_row(
+            params![
+                self.user_id,
+                self.name,
+                self.description,
+                self.url,
+                self.created_at
+            ],
             Article::from_row,
         )?;
 
-        info!(article.id=%inserted.id, "inserted");
-        for tag in self.tags {
-            AddTagToArticle::new(&inserted.id, &tag.id).execute(conn)?;
+        info!(article=%article.id, "inserted");
+        for tag_id in self.tags {
+            article.add_tag(conn, &tag_id)?;
         }
 
-        Ok(inserted)
+        Ok(article)
     }
 }

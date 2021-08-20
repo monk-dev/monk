@@ -1,3 +1,4 @@
 pub mod article;
-pub mod article_tag;
+pub mod namespace;
 pub mod tag;
+pub mod user;

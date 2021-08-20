@@ -39,26 +39,37 @@ pub fn init_db(path: impl AsRef<Path>) -> Result<DbConn, Error> {
 #[cfg(debug_assertions)]
 #[tracing::instrument]
 pub fn seed(conn: &Connection) -> Result<(), Error> {
+    use crate::models::{namespace::Namespace, user::User};
+
     info!("seeding db");
 
     info!("deleting old rows");
     conn.execute("DELETE FROM article_tag", [])?;
     conn.execute("DELETE FROM tag", [])?;
     conn.execute("DELETE FROM article", [])?;
+    conn.execute("DELETE FROM namespace_article", [])?;
+    conn.execute("DELETE FROM namespace", [])?;
+    conn.execute("DELETE FROM user", [])?;
+
+    let default_user = User::insert("default").execute(&conn)?;
+
+    let default_namespace = Namespace::insert("default", &default_user.id).execute(&conn)?;
 
     let linux = Tag::insert("linux").execute(&conn)?;
     let rust = Tag::insert("rust").execute(&conn)?;
 
-    let _af_xdp = Article::insert("AF_XDP")
+    let af_xdp = Article::insert("AF_XDP")
         .url("https://lwn.net/Articles/750845/".parse().unwrap())
         .description("Super fast packet capturing")
-        .tag(&linux)
+        .tag(&linux.id)
         .execute(&conn)?;
 
-    let _aya = Article::insert("Aya: eBPFs In Rust")
+    let aya = Article::insert("Aya: eBPFs In Rust")
         .url("https://github.com/alessandrod/aya".parse().unwrap())
-        .tags(&[linux, rust])
+        .tags(&[linux.id, rust.id])
         .execute(&conn)?;
+
+    default_namespace.add_articles(conn, &[af_xdp.id, aya.id])?;
 
     Ok(())
 }

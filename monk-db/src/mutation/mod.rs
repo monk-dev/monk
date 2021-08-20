@@ -3,7 +3,6 @@ pub mod output;
 
 use async_graphql::*;
 use tracing::info;
-use uuid::Uuid;
 
 use crate::{
     connection::DbConn,
@@ -43,7 +42,6 @@ impl Mutation {
         }
 
         if let Some(tags) = tags {
-            let tags = Tag::load_ids(&conn, &tags)?;
             insert = insert.tags(&tags);
         }
 

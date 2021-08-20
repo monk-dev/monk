@@ -4,7 +4,7 @@ use actix_web::{get, middleware::Logger, post, web, App, HttpResponse, HttpServe
 use async_graphql::{
     extensions::Tracing,
     http::{playground_source, GraphQLPlaygroundConfig},
-    EmptyMutation, EmptySubscription, Schema,
+    EmptySubscription, Schema,
 };
 use async_graphql_actix_web::{Request, Response};
 use monk_db::{graphql::MonkSchema, init_db, mutation::Mutation, query::Query};
