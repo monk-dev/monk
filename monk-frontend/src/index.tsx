@@ -41,7 +41,8 @@ query CardInfo {
 
 const client = new ApolloClient({
   uri: 'http://localhost:5555/graphql',
-  cache: new InMemoryCache()
+  cache: new InMemoryCache(),
+  queryDeduplication: false
 });
 
 
