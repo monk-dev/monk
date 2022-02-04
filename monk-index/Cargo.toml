@@ -1,0 +1,20 @@
+[package]
+name = "monk-index"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.53"
+async-trait = "0.1.52"
+lopdf = "*"
+mime = "0.3.16"
+monk-types = { path = "../monk-types" }
+pdf-extract = { git = "https://github.com/fisherdarling/pdf-extract", rev = "8630431963c4b2a572f6316e2487eec3aec4c182" }
+scraper = "0.12.0"
+serde = { version = "1.0.136", features = ["derive"] }
+tantivy = "0.16.1"
+thiserror = "1.0.30"
+tokio = { version = "1.16.1", features = ["fs"] }
+tracing = "0.1.29"
+tracing-subscriber = "0.3.7"
+uuid = "0.8.2"

@@ -1,0 +1,17 @@
+[package]
+name = "monk-dl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.53"
+async-trait = "0.1.52"
+infer = "0.6.0"
+mime = "0.3.16"
+mime_guess = "2.0.3"
+monk-types = { path = "../monk-types" }
+monolith = { git = "https://github.com/Y2Z/monolith" }
+reqwest = "0.11.9"
+sha2 = "0.10.1"
+tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread", "fs"] }
+tracing = "0.1.29"

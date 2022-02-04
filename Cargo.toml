@@ -1,7 +1,2 @@
 [workspace]
-members = ["monk-cli", "monkd"]
-exclude = ["monolith"]
-
-[profile.release]
-opt-level = 3
-# lto = true
+members = ["monk", "monk-cli", "monk-types", "monk-sqlite", "monk-index", "monk-dl", "monk-egui"]
