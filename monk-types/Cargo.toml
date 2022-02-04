@@ -1,0 +1,11 @@
+[package]
+name = "monk-types"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.136", features = ["derive"] }
+chrono = { version = "0.4.19", features = ["serde"] }
+async-trait = "0.1.52"
+anyhow = "1.0.53"
+uuid = { version = "0.8.2", features = ["serde"] }

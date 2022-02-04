@@ -1,0 +1,18 @@
+[package]
+name = "monk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.53"
+async-trait = "0.1.52"
+chrono = "0.4.19"
+monk-types = { path = "../monk-types" }
+monk-dl = { path = "../monk-dl" }
+monk-index = { path = "../monk-index" }
+monk-sqlite = { path = "../monk-sqlite" }
+thiserror = "1.0.30"
+tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1.29"
+tracing-subscriber = "0.3.7"
+uuid = "0.8.2"

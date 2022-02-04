@@ -1,5 +1,6 @@
 **/target/*
-tantivy/
-log/
-offline/
-index/
+index
+downloads
+
+**/*.sqlite-shm
+**/*.sqlite-wal
