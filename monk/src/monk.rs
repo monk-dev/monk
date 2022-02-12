@@ -1,5 +1,5 @@
 use monk_dl::MonkDownloader;
-use monk_index::{MonkExtractor, TantivyIndex};
+use monk_index::{MonkExtractor, MonkIndex};
 use monk_sqlite::MonkSqlite;
 use monk_types::config::MonkConfig;
 use monk_types::{
@@ -18,7 +18,7 @@ pub struct Monk {
 impl Monk {
     pub async fn from_config(config: MonkConfig) -> anyhow::Result<Self> {
         let store = Box::new(MonkSqlite::from_config(&config.store).await?);
-        let index = Box::new(TantivyIndex::from_config(&config.index).await?);
+        let index = Box::new(MonkIndex::from_config(&config.index).await?);
         let extractor = Box::new(MonkExtractor::default());
         let downloader = Box::new(MonkDownloader::from_config(&config.download).await?);
 

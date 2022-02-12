@@ -51,6 +51,19 @@ impl MonkApp {
 
         Ok(())
     }
+
+    pub fn draw_item(&self, id: Uuid, ui: &mut egui::Ui) -> egui::Response {
+        let item = &self.items[&id];
+
+        ui.group(|ui| {
+            ui.columns(3, |columns| {
+                columns[0].monospace(id.to_string());
+                columns[1].label(format!("{:?}", item.name));
+                columns[2].label(format!("{:?}", item.comment))
+            })
+        })
+        .response
+    }
 }
 
 impl epi::App for MonkApp {
@@ -96,11 +109,8 @@ impl epi::App for MonkApp {
                 });
             });
 
-            for (key, item) in &self.items {
-                ui.columns(2, |columns| {
-                    columns[0].monospace(key.to_string());
-                    columns[1].label(format!("{:?}", item.name));
-                });
+            for key in self.items.keys() {
+                self.draw_item(key.clone(), ui);
             }
         });
     }

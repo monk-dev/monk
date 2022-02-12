@@ -2,5 +2,9 @@
 index
 downloads
 
+**/node_modules/*
+**/dist/*
+**/.parcel-cache/*
+
 **/*.sqlite-shm
 **/*.sqlite-wal

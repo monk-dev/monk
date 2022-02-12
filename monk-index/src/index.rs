@@ -13,14 +13,14 @@ use crate::schema::{
     current_schema, BODY, COMMENT, EXTRA, FOUND, ID, NAME, SCHEMA_VERSION, TAG, TITLE, URL,
 };
 
-pub struct TantivyIndex {
+pub struct MonkIndex {
     index: tantivy::Index,
     writer: tantivy::IndexWriter,
 }
 
-impl TantivyIndex {
+impl MonkIndex {
     pub async fn from_config(config: &IndexConfig) -> anyhow::Result<Self> {
-        TantivyIndex::new(&config.path)
+        MonkIndex::new(&config.path)
     }
 
     pub fn new(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -36,11 +36,11 @@ impl TantivyIndex {
 
         let writer = index.writer(50_000_000).context("error making writer")?;
 
-        Ok(TantivyIndex { index, writer })
+        Ok(MonkIndex { index, writer })
     }
 }
 
-impl Index for TantivyIndex {
+impl Index for MonkIndex {
     fn count(&self) -> anyhow::Result<usize> {
         use tantivy::collector::Count;
 

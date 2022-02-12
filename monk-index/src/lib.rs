@@ -10,5 +10,5 @@ pub use self::extractor::*;
 pub use self::index::*;
 
 pub fn create_index(folder: impl AsRef<Path>) -> anyhow::Result<impl Index> {
-    TantivyIndex::new(folder)
+    MonkIndex::new(folder)
 }
