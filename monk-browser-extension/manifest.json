@@ -1,16 +1,18 @@
 {
   "manifest_version": 2,
+  "id": "3ff2caff-5501-46bc-9a35-1951ae582189",
   "name": "Monk",
   "version": "1.0",
   "description": "Store and search all of your content",
   "browser_action": {
     "default_title": "Monk",
-    "default_popup": "src/index.html"
+    "default_popup": "src/popup/index.html"
   },
+  "permissions": ["webRequest", "*://localhost:3000/*"],
   "content_scripts": [
     {
       "matches": ["https://*/*"],
-      "js": ["src/background.ts"]
+      "js": ["src/content_scripts/page-info.ts"]
     }
   ]
 }

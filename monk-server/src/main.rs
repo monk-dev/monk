@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tower_http::cors::{any, Any, CorsLayer, Origin};
 
 use self::errors::Error;
 
@@ -42,7 +43,8 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/items", get(list_items))
         .route("/items", post(create_item))
-        .layer(AddExtensionLayer::new(state));
+        .layer(AddExtensionLayer::new(state))
+        .layer(CorsLayer::new().allow_origin(any()).allow_methods(any()));
     // `GET /` goes to `root`
     // .route("/", get(root))
     // // `POST /users` goes to `create_user`

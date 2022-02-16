@@ -20,10 +20,12 @@
   },
   "dependencies": {
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "webextension-polyfill-ts": "^0.26.0"
   },
   "devDependencies": {
     "@parcel/config-webextension": "^2.2.1",
+    "@types/react": "^17.0.39",
     "autoprefixer": "^10.4.2",
     "parcel": "^2.2.1",
     "postcss": "^8.4.6",
