@@ -1,21 +1,7 @@
-import { Browser, browser } from "webextension-polyfill-ts";
-import { Msg, MsgType } from "../../message";
 import { useMonkContext } from "../context/MonkContext";
 
-async function sendGetPageInfo() {
-  const tabs = await browser.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
-  browser.tabs.sendMessage(tabs[0].id, {
-    type: MsgType.GetPageInfo,
-    payload: undefined,
-  });
-}
-
 export function Monk() {
-  const { pageInfo, monkUrl, error, setPageInfo, uploadToMonk } =
-    useMonkContext();
+  const { pageInfo, monkUrl, error, uploadToMonk } = useMonkContext();
 
   if (error) {
     return <>Error: {error}</>;

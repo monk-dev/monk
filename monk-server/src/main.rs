@@ -44,7 +44,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/items", get(list_items))
         .route("/items", post(create_item))
         .layer(AddExtensionLayer::new(state))
-        .layer(CorsLayer::new().allow_origin(any()).allow_methods(any()));
+        .layer(
+            CorsLayer::new()
+                .allow_origin(any())
+                .allow_methods(any())
+                .allow_headers(any()),
+        );
     // `GET /` goes to `root`
     // .route("/", get(root))
     // // `POST /users` goes to `create_user`

@@ -37,17 +37,15 @@ impl HtmlDownloader for MonolithDownloader {
 
             let url = url.parse()?;
 
-            let mut cache = HashMap::new();
-            let client = reqwest::blocking::Client::builder()
-                .timeout(std::time::Duration::from_secs(60))
-                .danger_accept_invalid_certs(false)
-                .user_agent(DEFAULT_USER_AGENT)
-                .build()
-                .unwrap();
-
-            // tracing::info!("[{}] Retrieving asset: {}", item.id, url);
-
             let file_path = tokio::task::spawn_blocking(move || {
+                let mut cache = HashMap::new();
+                let client = reqwest::blocking::Client::builder()
+                    .timeout(std::time::Duration::from_secs(60))
+                    .danger_accept_invalid_certs(false)
+                    .user_agent(DEFAULT_USER_AGENT)
+                    .build()
+                    .unwrap();
+
                 tracing::info!(%url, "retrieving asset");
                 let (data, _final_url, _media_type, char_set) =
                     monolith::utils::retrieve_asset(&mut cache, &client, &url, &url, &opts, 1)

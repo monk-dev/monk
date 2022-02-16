@@ -1,7 +1,7 @@
+import React, { useContext, useEffect, useState } from "react";
 import { browser } from "webextension-polyfill-ts";
-import React, { useState, useEffect, createContext, useContext } from "react";
-import { PageInfo } from "../../page_info";
 import { Msg, MsgType } from "../../message";
+import { PageInfo } from "../../page_info";
 
 interface MonkContextData {
   pageInfo: PageInfo;
@@ -40,6 +40,7 @@ export const MonkProvider = ({
       body: JSON.stringify({
         name: pageInfo.title,
         url: pageInfo.url,
+        tags: [],
       }),
       headers: {
         "Content-Type": "application/json",
