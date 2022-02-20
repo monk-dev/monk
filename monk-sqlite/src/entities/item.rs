@@ -8,8 +8,8 @@ pub struct Model {
     pub name: Option<String>,
     pub url: Option<String>,
     pub body: Option<String>,
-    pub comment: Option<String>,
     pub summary: Option<String>,
+    pub comment: Option<String>,
     pub created_at: DateTimeUtc,
 }
 

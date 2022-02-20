@@ -169,6 +169,7 @@ impl Store for MonkSqlite {
         name: Option<String>,
         url: Option<String>,
         body: Option<String>,
+        summary: Option<String>,
         comment: Option<String>,
     ) -> anyhow::Result<Option<Item>> {
         let item = self.get_item_model(id).await?;
@@ -189,6 +190,10 @@ impl Store for MonkSqlite {
 
         if let Some(body) = body {
             item.body = Set(Some(body));
+        }
+
+        if let Some(summary) = summary {
+            item.summary = Set(Some(summary));
         }
 
         if let Some(comment) = comment {

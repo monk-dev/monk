@@ -38,6 +38,7 @@ pub struct EditItem {
     pub name: Option<String>,
     pub url: Option<String>,
     pub body: Option<String>,
+    pub summary: Option<String>,
     pub comment: Option<String>,
     pub add_tags: Vec<String>,
     pub remove_tags: Vec<String>,

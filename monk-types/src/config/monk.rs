@@ -22,6 +22,7 @@ impl Default for MonkConfig {
             index: IndexConfig {
                 path: "index".into(),
                 index_on_add: true,
+                summarize_on_add: true,
             },
             download: DownloadConfig {
                 path: "downloads".into(),

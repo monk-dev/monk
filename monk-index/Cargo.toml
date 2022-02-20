@@ -10,6 +10,7 @@ lopdf = "*"
 mime = "0.3.16"
 monk-types = { path = "../monk-types" }
 pdf-extract = { git = "https://github.com/fisherdarling/pdf-extract", rev = "3e013fcac3da0f2ccf25d3b33571189e1d3ce847" }
+rust-bert = "0.17.0"
 scraper = "0.12.0"
 serde = { version = "1.0.136", features = ["derive"] }
 tantivy = "0.16.1"

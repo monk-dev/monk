@@ -65,8 +65,16 @@ impl MonkTrait for Monk {
             // If a body, the textual representation of the item, was extracted,
             // add it to the item model.
             if let Some(info) = extracted {
+                let summary = if self.config.index.summarize_on_add {
+                    self.index
+                        .summarize(info.body.as_deref().unwrap_or_default())
+                        .ok()
+                } else {
+                    None
+                };
+
                 self.store
-                    .update_item(item.id.clone(), None, None, info.body, None)
+                    .update_item(item.id.clone(), None, None, info.body, summary, None)
                     .await?;
             }
         }
@@ -103,6 +111,7 @@ impl MonkTrait for Monk {
                 edit.name,
                 edit.url,
                 edit.body,
+                edit.summary,
                 edit.comment,
             )
             .await

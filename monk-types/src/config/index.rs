@@ -6,4 +6,5 @@ use serde::{Deserialize, Serialize};
 pub struct IndexConfig {
     pub path: PathBuf,
     pub index_on_add: bool,
+    pub summarize_on_add: bool,
 }

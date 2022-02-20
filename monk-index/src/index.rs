@@ -129,6 +129,16 @@ impl Index for MonkIndex {
         Ok(())
     }
 
+    fn summarize(&mut self, text: &str) -> anyhow::Result<String> {
+        use rust_bert::pipelines::summarization::SummarizationModel;
+
+        let model = SummarizationModel::new(Default::default())?;
+        let input = [text];
+        let output = model.summarize(&input);
+
+        Ok(output.join("\n"))
+    }
+
     fn remove(&mut self, id: Uuid) -> anyhow::Result<()> {
         let term = Term::from_field_text(ID, &id.to_string());
 
