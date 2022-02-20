@@ -6,6 +6,7 @@ use monk_types::{
     AddItem, Blob, CreateLink, DeleteItem, DeleteLink, Downloader, EditItem, Extractor, GetBlob,
     GetItem, Index, Item, LinkedItems, ListItem, MonkTrait, Search, SearchResult, Store,
 };
+use tracing::info;
 
 pub struct Monk {
     pub config: MonkConfig,
@@ -35,7 +36,7 @@ impl Monk {
 #[async_trait::async_trait]
 impl MonkTrait for Monk {
     async fn add(&mut self, add: AddItem) -> anyhow::Result<Item> {
-        let item = self
+        let mut item = self
             .store
             .add_item(add.name, add.url, add.comment, add.tags)
             .await?;
@@ -56,6 +57,8 @@ impl MonkTrait for Monk {
             let extracted = self.extractor.extract_info(&item, blob.as_ref()).await?;
             let tags = self.store.item_tags(item.id.clone()).await?;
 
+            info!(?extracted);
+
             // remove any previous information
             self.index.remove(item.id.clone())?;
 
@@ -65,17 +68,12 @@ impl MonkTrait for Monk {
             // If a body, the textual representation of the item, was extracted,
             // add it to the item model.
             if let Some(info) = extracted {
-                let summary = if self.config.index.summarize_on_add {
-                    self.index
-                        .summarize(info.body.as_deref().unwrap_or_default())
-                        .ok()
-                } else {
-                    None
-                };
-
-                self.store
-                    .update_item(item.id.clone(), None, None, info.body, summary, None)
-                    .await?;
+                info!("updating item with extracted info");
+                item = self
+                    .store
+                    .update_item(item.id.clone(), None, None, info.body, None, None)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("item should be present"))?;
             }
         }
 

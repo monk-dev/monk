@@ -6,6 +6,7 @@ use sea_orm::{
     QueryFilter, Set,
 };
 use sqlx::types::chrono::Utc;
+use tracing::info;
 use uuid::Uuid;
 
 use crate::entities::{blob, item, item_tag, link, tag};

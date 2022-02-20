@@ -7,6 +7,7 @@ use tantivy::query::QueryParser;
 use tantivy::{collector::TopDocs, Document};
 use tantivy::{directory::MmapDirectory, query::Query, Searcher};
 use tantivy::{DocAddress, SnippetGenerator, Term};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::schema::{
@@ -129,14 +130,9 @@ impl Index for MonkIndex {
         Ok(())
     }
 
-    fn summarize(&mut self, text: &str) -> anyhow::Result<String> {
-        use rust_bert::pipelines::summarization::SummarizationModel;
-
-        let model = SummarizationModel::new(Default::default())?;
-        let input = [text];
-        let output = model.summarize(&input);
-
-        Ok(output.join("\n"))
+    fn summarize(&mut self, _text: &str) -> anyhow::Result<String> {
+        info!("summarizing text");
+        Ok(String::new())
     }
 
     fn remove(&mut self, id: Uuid) -> anyhow::Result<()> {
