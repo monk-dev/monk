@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct AddItem {
     pub name: Option<String>,
     pub url: Option<String>,
+    pub body: Option<String>,
     pub comment: Option<String>,
     pub tags: Vec<String>,
 }
@@ -36,6 +37,7 @@ pub struct EditItem {
     pub id: String,
     pub name: Option<String>,
     pub url: Option<String>,
+    pub body: Option<String>,
     pub comment: Option<String>,
     pub add_tags: Vec<String>,
     pub remove_tags: Vec<String>,

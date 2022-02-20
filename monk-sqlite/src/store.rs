@@ -18,6 +18,9 @@ impl MonkSqlite {
     pub async fn from_config(config: &StoreConfig) -> anyhow::Result<Self> {
         let path = config.path.display().to_string();
 
+        // Causes sqlx to create the database if it does not exist
+        let path = format!("{path}?mode=rwc");
+
         crate::create_models(&path).await?;
         crate::run_migrations(&path).await?;
 
@@ -52,7 +55,7 @@ impl MonkSqlite {
             id: item.id,
             name: item.name,
             url: item.url,
-            content: item.content,
+            body: item.body,
             comment: item.comment,
             summary: item.summary,
             tags,
@@ -165,6 +168,7 @@ impl Store for MonkSqlite {
         id: Uuid,
         name: Option<String>,
         url: Option<String>,
+        body: Option<String>,
         comment: Option<String>,
     ) -> anyhow::Result<Option<Item>> {
         let item = self.get_item_model(id).await?;
@@ -181,6 +185,10 @@ impl Store for MonkSqlite {
 
         if let Some(url) = url {
             item.url = Set(Some(url));
+        }
+
+        if let Some(body) = body {
+            item.body = Set(Some(body));
         }
 
         if let Some(comment) = comment {

@@ -23,6 +23,7 @@ pub trait Store {
         id: Uuid,
         name: Option<String>,
         url: Option<String>,
+        body: Option<String>,
         comment: Option<String>,
     ) -> anyhow::Result<Option<Item>>;
 

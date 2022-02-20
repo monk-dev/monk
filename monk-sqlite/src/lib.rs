@@ -57,8 +57,6 @@ async fn create_models(path: &str) -> anyhow::Result<()> {
     info!(%sql, "link sql");
     db.execute(sql).await?;
 
-    // Other Models:
-
     Ok(())
 }
 

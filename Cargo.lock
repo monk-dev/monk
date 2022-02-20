@@ -2314,7 +2314,6 @@ version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b49a0272112719d0037ab63d4bb67f73ba659e1e90bc38f235f163a457ac16f3"
 dependencies = [
- "chrono",
  "dtoa",
  "encoding",
  "flate2",
@@ -3148,7 +3147,7 @@ checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
 [[package]]
 name = "pdf-extract"
 version = "0.6.4-alpha.0"
-source = "git+https://github.com/fisherdarling/pdf-extract?rev=8630431963c4b2a572f6316e2487eec3aec4c182#8630431963c4b2a572f6316e2487eec3aec4c182"
+source = "git+https://github.com/fisherdarling/pdf-extract?rev=3e013fcac3da0f2ccf25d3b33571189e1d3ce847#3e013fcac3da0f2ccf25d3b33571189e1d3ce847"
 dependencies = [
  "adobe-cmap-parser",
  "encoding",
@@ -3329,9 +3328,9 @@ checksum = "07e2192780e9f8e282049ff9bffcaa28171e1cb0844f49ed5374e518ae6024ec"
 
 [[package]]
 name = "postscript"
-version = "0.11.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3c9ba7f8065a92300c604be066f1a9f694a63281ac602c43c0cbabafd625233"
+checksum = "ac1825c05c4f9e2f781202d1a02fff5e5f722bbafca542d818364e1b1ea22575"
 
 [[package]]
 name = "ppv-lite86"

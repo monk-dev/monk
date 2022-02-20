@@ -4,7 +4,7 @@ mod traits;
 
 pub use self::models::{
     blob::Blob,
-    index::{ExtractedInfo, SearchResult, Snippet},
+    index::{ExtractedInfo, SearchResult, Snippet, Snippets},
     item::Item,
     monk::{
         AddItem, CreateLink, DeleteItem, DeleteLink, EditItem, GetBlob, GetItem, LinkedItems,

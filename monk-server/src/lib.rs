@@ -12,7 +12,7 @@ use monk::Monk;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tower_http::cors::{any, CorsLayer};
+use tower_http::cors::{Any, CorsLayer};
 
 use self::errors::Error;
 
@@ -32,14 +32,14 @@ pub async fn run(config: MonkConfig) -> anyhow::Result<Arc<Mutex<Monk>>> {
 
     // build our application with a route
     let app = Router::new()
-        .route("/items", get(list_items))
+        .route("/items", get(items))
         .route("/items", post(create_item))
         .layer(AddExtensionLayer::new(state))
         .layer(
             CorsLayer::new()
-                .allow_origin(any())
-                .allow_methods(any())
-                .allow_headers(any()),
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
         );
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -55,7 +55,7 @@ pub async fn run(config: MonkConfig) -> anyhow::Result<Arc<Mutex<Monk>>> {
     Ok(monk)
 }
 
-async fn list_items(Extension(state): Extension<State>) -> Result<Json<Vec<Item>>> {
+async fn items(Extension(state): Extension<State>) -> Result<Json<Vec<Item>>> {
     let mut monk = state.monk.lock().await;
     let items = monk.list(Default::default()).await?;
 

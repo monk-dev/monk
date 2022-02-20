@@ -109,6 +109,7 @@ async fn main() -> anyhow::Result<()> {
                 .add(AddItem {
                     name,
                     url,
+                    body: None,
                     comment,
                     tags,
                 })

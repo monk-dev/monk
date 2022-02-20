@@ -60,7 +60,15 @@ impl MonkTrait for Monk {
             self.index.remove(item.id.clone())?;
 
             self.index
-                .index_full(&item, &tags, extracted.unwrap_or_default())?;
+                .index_full(&item, &tags, extracted.clone().unwrap_or_default())?;
+
+            // If a body, the textual representation of the item, was extracted,
+            // add it to the item model.
+            if let Some(info) = extracted {
+                self.store
+                    .update_item(item.id.clone(), None, None, info.body, None)
+                    .await?;
+            }
         }
 
         Ok(item)
@@ -90,7 +98,13 @@ impl MonkTrait for Monk {
 
     async fn edit(&mut self, edit: EditItem) -> anyhow::Result<Option<Item>> {
         self.store
-            .update_item(edit.id.parse()?, edit.name, edit.url, edit.comment)
+            .update_item(
+                edit.id.parse()?,
+                edit.name,
+                edit.url,
+                edit.body,
+                edit.comment,
+            )
             .await
     }
 

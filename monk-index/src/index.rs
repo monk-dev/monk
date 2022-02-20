@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use anyhow::Context;
-use monk_types::config::IndexConfig;
+use monk_types::{config::IndexConfig, Snippets};
 use monk_types::{ExtractedInfo, Index, Item, SearchResult, Snippet, Tag};
-use tantivy::collector::TopDocs;
-use tantivy::directory::MmapDirectory;
 use tantivy::query::QueryParser;
+use tantivy::{collector::TopDocs, Document};
+use tantivy::{directory::MmapDirectory, query::Query, Searcher};
 use tantivy::{DocAddress, SnippetGenerator, Term};
 use uuid::Uuid;
 
@@ -72,31 +72,12 @@ impl Index for MonkIndex {
 
         let docs: Result<Vec<_>, _> = resulting_docs
             .into_iter()
-            .map(|(_score, address)| searcher.doc(address))
+            .map(|(score, address)| searcher.doc(address).map(|doc| (score, doc)))
             .collect();
 
         let docs = &docs?;
 
-        let results: Vec<SearchResult> = docs
-            .iter()
-            .flat_map(|doc| {
-                let id = doc.get_first(ID)?.text()?.parse().ok()?;
-                let snippet = snippet_generator.snippet_from_doc(&doc);
-
-                Some(SearchResult {
-                    id,
-                    snippet: Snippet {
-                        fragment: snippet.fragments().to_string(),
-                        highlighted: snippet
-                            .highlighted()
-                            .iter()
-                            .map(|range| (range.start, range.end))
-                            .collect(),
-                    },
-                })
-            })
-            .collect();
-
+        let results = create_search_results(&searcher, &query, &docs)?;
         Ok(results)
     }
 
@@ -155,6 +136,51 @@ impl Index for MonkIndex {
         self.writer.commit().context("removing an item")?;
 
         Ok(())
+    }
+}
+
+fn create_search_results(
+    searcher: &Searcher,
+    query: &dyn Query,
+    docs: &[(f32, Document)],
+) -> anyhow::Result<Vec<SearchResult>> {
+    let mut title_generator = SnippetGenerator::create(&searcher, &*query, TITLE)?;
+    title_generator.set_max_num_chars(120);
+
+    let mut body_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+    body_generator.set_max_num_chars(120);
+
+    let mut comment_generator = SnippetGenerator::create(&searcher, &*query, COMMENT)?;
+    comment_generator.set_max_num_chars(120);
+
+    let results: Vec<SearchResult> = docs
+        .iter()
+        .flat_map(|(score, doc)| {
+            let id = doc.get_first(ID)?.text()?.parse().ok()?;
+
+            Some(SearchResult {
+                id,
+                score: *score,
+                snippets: Snippets {
+                    title: convert_snippet(title_generator.snippet_from_doc(&doc)),
+                    body: convert_snippet(body_generator.snippet_from_doc(&doc)),
+                    comment: convert_snippet(comment_generator.snippet_from_doc(&doc)),
+                },
+            })
+        })
+        .collect();
+
+    Ok(results)
+}
+
+pub fn convert_snippet(snippet: tantivy::Snippet) -> Snippet {
+    Snippet {
+        fragment: snippet.fragments().to_string(),
+        highlighted: snippet
+            .highlighted()
+            .iter()
+            .map(|range| (range.start, range.end))
+            .collect(),
     }
 }
 

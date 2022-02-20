@@ -9,7 +9,7 @@ pub struct Item {
     pub id: Uuid,
     pub name: Option<String>,
     pub url: Option<String>,
-    pub content: Option<String>,
+    pub body: Option<String>,
     pub comment: Option<String>,
     pub summary: Option<String>,
     pub tags: Vec<Tag>,
