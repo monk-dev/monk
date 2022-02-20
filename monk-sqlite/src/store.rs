@@ -1,5 +1,4 @@
 use anyhow::Context;
-use chrono::DateTime;
 use monk_types::config::StoreConfig;
 use monk_types::{Blob, Item, Store, Tag};
 use sea_orm::{
@@ -52,11 +51,13 @@ impl MonkSqlite {
         Ok(Item {
             id: item.id,
             name: item.name,
-            comment: item.comment,
             url: item.url,
+            content: item.content,
+            comment: item.comment,
+            summary: item.summary,
             tags,
             blob,
-            created_at: DateTime::from_utc(item.created_at, Utc),
+            created_at: item.created_at,
         })
     }
 
@@ -79,7 +80,7 @@ impl MonkSqlite {
             tag::ActiveModel {
                 id: Set(Uuid::new_v4()),
                 tag: Set(tag),
-                created_at: Set(Utc::now().naive_utc()),
+                created_at: Set(Utc::now()),
             }
             .insert(&self.db)
             .await?
@@ -123,7 +124,7 @@ impl Store for MonkSqlite {
             name: Set(name),
             url: Set(url),
             comment: Set(comment),
-            created_at: Set(Utc::now().naive_utc()),
+            created_at: Set(Utc::now()),
             ..Default::default()
         }
         .insert(&self.db)
@@ -277,7 +278,7 @@ impl Store for MonkSqlite {
             content_type: Set(content_type),
             path: Set(path),
             managed: Set(managed),
-            created_at: Set(Utc::now().naive_utc()),
+            created_at: Set(Utc::now()),
         }
         .insert(&self.db)
         .await
@@ -305,7 +306,7 @@ impl From<tag::Model> for Tag {
         Tag {
             id: model.id,
             tag: model.tag,
-            created_at: DateTime::from_utc(model.created_at, Utc),
+            created_at: model.created_at,
         }
     }
 }
@@ -319,7 +320,7 @@ impl From<blob::Model> for Blob {
             content_type: model.content_type,
             path: model.path,
             managed: model.managed,
-            created_at: DateTime::from_utc(model.created_at, Utc),
+            created_at: model.created_at,
         }
     }
 }
