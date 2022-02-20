@@ -1,2 +1,12 @@
 [workspace]
-members = ["monk", "monk-cli", "monk-types", "monk-sqlite", "monk-index", "monk-dl", "monk-egui", "monk-server"]
+members = [
+    "monk", 
+    "monk-cli", 
+    "monk-types", 
+    "monk-sqlite", 
+    "monk-index", 
+    "monk-dl", 
+    "monk-egui", 
+    "monk-server",
+    "monk-desktop"
+]
