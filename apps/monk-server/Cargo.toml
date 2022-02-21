@@ -1,22 +1,24 @@
 [package]
-name = "monk-cli"
+name = "monk-server"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "monk"
-path = "./src/main.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.53"
+axum = "0.4.5"
 chrono = "0.4.19"
 clap = { version = "3.0.13", features = ["derive"] }
+crossbeam-channel = "0.5.2"
 log = "0.4.14"
-monk = { path = "../monk" }
+monk = { path = "../../monk" }
 open = "2.0.2"
+serde = "1.0.136"
 serde_yaml = "0.8.23"
 thiserror = "1.0.30"
 tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
+tower-http = { version = "0.2", features = ["cors"] }
 tracing = "0.1.29"
 tracing-subscriber = { version = "0.3.7", features = ["env-filter"] }
 uuid = "0.8.2"

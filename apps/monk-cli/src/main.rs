@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
             let items = monk.list(ListItem::default()).await?;
 
             for item in items {
-                println!("{item:?}");
+                println!("{:?}: {:?}", item.id, item.name);
             }
         }
         Command::Get { id } => {

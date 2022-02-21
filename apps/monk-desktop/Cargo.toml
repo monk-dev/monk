@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.53"
 dioxus = { version = "0.1.8", features = ["desktop"] }
-monk = { path = "../monk" }
+monk = { path = "../../monk" }
 monk-server = { path = "../monk-server" }
 tokio = "1.17.0"

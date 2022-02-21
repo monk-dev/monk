@@ -1,16 +1,18 @@
 [package]
-name = "monk-egui"
+name = "monk-cli"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "monk"
+path = "./src/main.rs"
 
 [dependencies]
 anyhow = "1.0.53"
 chrono = "0.4.19"
 clap = { version = "3.0.13", features = ["derive"] }
-crossbeam-channel = "0.5.2"
-eframe = "0.16.0"
 log = "0.4.14"
-monk = { path = "../monk" }
+monk = { path = "../../monk" }
 open = "2.0.2"
 serde_yaml = "0.8.23"
 thiserror = "1.0.30"
