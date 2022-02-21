@@ -5,6 +5,7 @@ members = [
     "monk-sqlite", 
     "monk-index", 
     "monk-dl",
+    "monk-summary",
     "apps/monk-cli", 
     "apps/monk-egui", 
     "apps/monk-server",
