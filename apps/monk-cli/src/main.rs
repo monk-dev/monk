@@ -92,12 +92,16 @@ async fn main() -> anyhow::Result<()> {
             let items = monk.list(ListItem::default()).await?;
 
             for item in items {
-                println!("{:?}: {:?}", item.id, item.name);
+                println!("{:?}: {:?}\n\t{:?}", item.id, item.name, item.summary);
             }
         }
         Command::Get { id } => {
             let item = monk.get(GetItem { id }).await?;
-            println!("{item:?}");
+            if let Some(item) = item {
+                println!("{:?}: {:?}\n\t{:?}", item.id, item.name, item.summary);
+            } else {
+                println!("NOT FOUND");
+            }
         }
         Command::Add {
             name,

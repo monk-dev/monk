@@ -69,9 +69,24 @@ impl MonkTrait for Monk {
             // add it to the item model.
             if let Some(info) = extracted {
                 info!("updating item with extracted info");
+
+                let summary = if self.config.index.summarize_on_add {
+                    if let Some(body) = info.body.clone() {
+                        let summary =
+                            tokio::task::spawn_blocking(move || monk_summary::summarize(&body))
+                                .await?;
+
+                        Some(summary)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
                 item = self
                     .store
-                    .update_item(item.id.clone(), None, None, info.body, None, None)
+                    .update_item(item.id.clone(), None, None, info.body, summary, None)
                     .await?
                     .ok_or_else(|| anyhow::anyhow!("item should be present"))?;
             }

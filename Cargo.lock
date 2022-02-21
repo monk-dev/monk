@@ -2648,6 +2648,7 @@ dependencies = [
  "monk-dl",
  "monk-index",
  "monk-sqlite",
+ "monk-summary",
  "monk-types",
  "thiserror",
  "tokio",
@@ -2798,6 +2799,7 @@ dependencies = [
  "rust-stemmers",
  "rust_tokenizers",
  "stopwords",
+ "tracing",
  "unicode-segmentation",
 ]
 

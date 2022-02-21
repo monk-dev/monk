@@ -3,9 +3,14 @@ use std::collections::{HashMap, HashSet};
 use ndarray::{Array2, Zip};
 use once_cell::sync::Lazy;
 use ordered_float::NotNan;
+use rayon::{
+    iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
+    slice::ParallelSliceMut,
+};
 use regex::Regex;
 use rust_stemmers::Stemmer;
 use stopwords::{Language, Stopwords, NLTK};
+use tracing::info;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::pagerank::pagerank;
@@ -23,11 +28,13 @@ static EN_STOPWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 fn clean(text: &str) -> String {
     static RE: Lazy<Regex> = Lazy::new(|| Regex::new("\\[.*?\\]|\"|\\n").unwrap());
 
+    info!("cleaning text");
+
     RE.replace_all(text, "").to_string()
 }
 
 fn sentences(text: &str) -> Vec<&str> {
-    // text.unicode_sentences().collect()
+    info!("creating sentences");
     let mut sentences = Vec::with_capacity(64);
 
     for sentence in cutters::cut(text, cutters::Language::English) {
@@ -45,51 +52,52 @@ pub fn summarize(text: &str) -> String {
     let cleaned = clean(&text);
     let original_sentences = sentences(&cleaned);
     let sentences: Vec<_> = original_sentences
-        .iter()
+        .par_iter()
         .copied()
         .map(str::to_lowercase)
         .collect();
 
-    // for sentence in &sentences {
-    //     println!("{sentence}");
-    // }
-
+    info!("creating sentence stem freqs");
     let stemmer = Stemmer::create(rust_stemmers::Algorithm::English);
-    let mut sentence_stem_freqs: Vec<HashMap<_, usize>> = Vec::with_capacity(sentences.len());
+    let sentence_stem_freqs: Vec<HashMap<_, usize>> = sentences
+        .par_iter()
+        .map(|sentence| {
+            let mut stem_freqs: HashMap<_, usize> = HashMap::with_capacity(4);
 
-    for sentence in &sentences {
-        let mut stem_freqs: HashMap<_, usize> = HashMap::with_capacity(4);
+            for word in sentence.unicode_words() {
+                if EN_STOPWORDS.contains(word) {
+                    continue;
+                }
 
-        for word in sentence.unicode_words() {
-            if EN_STOPWORDS.contains(word) {
-                continue;
+                let stem = stemmer.stem(word);
+                *stem_freqs.entry(stem).or_default() += 1;
             }
 
-            let stem = stemmer.stem(word);
-            *stem_freqs.entry(stem).or_default() += 1;
-        }
+            stem_freqs
+        })
+        .collect();
 
-        sentence_stem_freqs.push(stem_freqs);
-    }
+    let global_stem_freqs = sentence_stem_freqs.clone().into_par_iter().reduce(
+        || HashMap::new(),
+        |mut freqs, sentence_freqs| {
+            for (stem, count) in sentence_freqs.into_iter() {
+                *freqs.entry(stem).or_default() += count;
+            }
 
-    let global_stem_freqs =
-        sentence_stem_freqs
-            .iter()
-            .fold(HashMap::new(), |mut freqs, sentence_freqs| {
-                freqs.extend(sentence_freqs);
-                freqs
-            });
+            freqs
+        },
+    );
 
-    let mut unique_stems: Vec<(_, _)> = global_stem_freqs.iter().collect();
-    unique_stems.sort();
+    let mut unique_stems: Vec<(_, _)> = global_stem_freqs.par_iter().collect();
+    unique_stems.par_sort();
 
     let stem_idfs: HashMap<_, f32> = unique_stems
-        .iter()
+        .par_iter()
         .map(|(stem, _)| {
             let document_count = sentences.len() as f32;
             let usage_count = sentence_stem_freqs
-                .iter()
-                .filter(|freqs| freqs.contains_key(**stem))
+                .par_iter()
+                .filter(|freqs| freqs.contains_key(*stem))
                 .count() as f32;
             let idf = (document_count / usage_count).log10();
 
@@ -97,6 +105,11 @@ pub fn summarize(text: &str) -> String {
         })
         .collect();
 
+    info!(
+        "creating sentence vectors: {} x {}",
+        sentences.len(),
+        unique_stems.len()
+    );
     let mut sentence_vectors: Array2<f32> = Array2::zeros([sentences.len(), unique_stems.len()]);
     Zip::indexed(&mut sentence_vectors).par_for_each(|(i, j), tfidf| {
         let (stem, _) = &unique_stems[j];
@@ -104,7 +117,7 @@ pub fn summarize(text: &str) -> String {
         let idf: f32 = stem_idfs[stem];
 
         let sentence_freqs = &sentence_stem_freqs[i];
-        let freq_in_sentence = sentence_freqs.get(**stem).copied().unwrap_or(0) as f32;
+        let freq_in_sentence = sentence_freqs.get(*stem).copied().unwrap_or(0) as f32;
         let total_in_sentence: f32 =
             sentence_freqs.iter().map(|(_, freq)| freq).sum::<usize>() as f32;
 
@@ -117,6 +130,11 @@ pub fn summarize(text: &str) -> String {
         }
     });
 
+    info!(
+        "constructing probabilities: {} x {}",
+        sentences.len(),
+        sentences.len()
+    );
     let mut probabilities = Array2::zeros([sentences.len(), sentences.len()]);
     Zip::indexed(&mut probabilities).par_for_each(|(i, j), p| {
         if i == j {
@@ -130,7 +148,10 @@ pub fn summarize(text: &str) -> String {
         let vec_j_l2_norm = vec_j.dot(&vec_j).sqrt();
 
         let cos_sim = vec_i.dot(&vec_j) / (vec_i_l2_norm * vec_j_l2_norm);
-        *p = cos_sim;
+
+        if !cos_sim.is_nan() {
+            *p = cos_sim;
+        }
     });
 
     // Row-wise sum should be equal to 1:
@@ -142,14 +163,14 @@ pub fn summarize(text: &str) -> String {
         }
     });
 
-    let ranks = pagerank(&probabilities, 0.85, 1E-6);
+    let ranks = pagerank(&probabilities, 0.85, 1E-4);
     let mut ranks: Vec<_> = ranks
         .into_iter()
         .enumerate()
         .map(|(i, rank)| (NotNan::new(rank).unwrap(), i))
         .collect();
 
-    ranks.sort();
+    ranks.par_sort();
 
     let mut top: Vec<_> = ranks.into_iter().rev().take(3).map(|(_, i)| i).collect();
     top.sort();
