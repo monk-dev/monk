@@ -70,10 +70,6 @@ impl Downloader for MonkDownloader {
 
         let mut managed = true;
         let mut mime_type = mime_guess::from_path(url).first_or(mime::TEXT_HTML_UTF_8);
-        // tokio::fs::metadata(url).await {
-        //         info!("url is a local path");
-
-        //         PathBuf::from(url).canonicalize()?;
 
         let path = if let Ok(_) = tokio::fs::metadata(url).await {
             // This is a local path, instruct the store not to delete it if the blob is deleted:

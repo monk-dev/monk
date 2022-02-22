@@ -11,7 +11,7 @@ pub struct Model {
     pub content_type: String,
     pub path: String,
     pub managed: bool,
-    pub created_at: DateTime,
+    pub created_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

@@ -1,6 +1,6 @@
 use tantivy::schema::{FacetOptions, Field, Schema, FAST, INDEXED, STORED, STRING, TEXT};
 
-pub static SCHEMA_VERSION: &str = "0.0.0";
+pub static SCHEMA_VERSION: &str = "0.0.1";
 
 pub const ID: Field = Field::from_field_id(0);
 pub const NAME: Field = Field::from_field_id(1);

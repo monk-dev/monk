@@ -15,5 +15,7 @@ pub trait Index {
     fn index_full(&mut self, item: &Item, tags: &[Tag], extra: ExtractedInfo)
         -> anyhow::Result<()>;
 
+    fn summarize(&mut self, text: &str) -> anyhow::Result<String>;
+
     fn remove(&mut self, id: Uuid) -> anyhow::Result<()>;
 }

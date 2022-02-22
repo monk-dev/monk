@@ -7,8 +7,10 @@ pub struct Model {
     pub id: Uuid,
     pub name: Option<String>,
     pub url: Option<String>,
+    pub body: Option<String>,
+    pub summary: Option<String>,
     pub comment: Option<String>,
-    pub created_at: DateTime,
+    pub created_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

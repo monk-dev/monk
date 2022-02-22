@@ -1,0 +1,23 @@
+[package]
+name = "monk-summary"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+any_ascii = "0.3.0"
+cutters = "0.1.2"
+ndarray = { version = "0.15.4", features = ["rayon"] }
+ndarray-rand = "0.14.0"
+once_cell = "1.9.0"
+ordered-float = "2.10.0"
+rayon = "1.5.1"
+regex = "1.5.4"
+rust-stemmers = "1.2.0"
+rust_tokenizers = "7.0.1"
+stopwords = "0.1.1"
+tracing = "0.1.29"
+tracing-subscriber = { version = "0.3.7", features = ["env-filter"] }
+unicode-normalization = "0.1.19"
+unicode-segmentation = "1.9.0"

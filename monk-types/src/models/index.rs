@@ -11,7 +11,15 @@ pub struct ExtractedInfo {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: Uuid,
-    pub snippet: Snippet,
+    pub score: f32,
+    pub snippets: Snippets,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Snippets {
+    pub title: Snippet,
+    pub body: Snippet,
+    pub comment: Snippet,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
