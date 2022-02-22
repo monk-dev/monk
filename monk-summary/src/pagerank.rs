@@ -13,12 +13,6 @@ pub fn pagerank(probabilities: &Array2<f32>, d: f32, tolerance: f32) -> Array1<f
         tolerance
     );
 
-    // probabilities.for_each(|e| {
-    //     if e.is_nan() {
-    //         println!("probabilitiy is nan!");
-    //     }
-    // });
-
     // The number of total links:
     let N = probabilities.shape()[0];
 
@@ -30,8 +24,6 @@ pub fn pagerank(probabilities: &Array2<f32>, d: f32, tolerance: f32) -> Array1<f
     // and then normalized to sum to 1.
     let mut x: Array1<f32> = Array::random(N, Uniform::new(0.0, 1.0));
     x /= x.sum();
-
-    info!("{x:?}");
 
     let mut last_x: Array1<f32> = Array1::zeros(N);
 
@@ -46,9 +38,6 @@ pub fn pagerank(probabilities: &Array2<f32>, d: f32, tolerance: f32) -> Array1<f
             break;
         }
 
-        // info!("iteration: {}, l1_diff={}", iteration, l1_diff);
-
-        // break;
         last_x = x.clone();
 
         if iteration % 10 == 0 {
