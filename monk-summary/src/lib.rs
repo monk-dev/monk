@@ -26,11 +26,70 @@ static EN_STOPWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 });
 
 fn clean(text: &str) -> String {
-    static RE: Lazy<Regex> = Lazy::new(|| Regex::new("\\[.*?\\]|\"|\\n").unwrap());
+    static REMOVE_SPACE_SPACE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r#"(?x)
+        ([[:punct:]])\s\s
+    "#,
+        )
+        .unwrap()
+    });
+    static REMOVE_LONG_WORDS: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r#"(?x)
+        \S{20,}?    # Anything longer than 20 characters
+    "#,
+        )
+        .unwrap()
+    });
+    static REMOVE_CHARS: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r#"(?xs)
+        <!--.*?-->  |   # HTML Comments
+        //.*?\n     |   # Comments
+        \[.*?\]     |   # Anything in square brackets
+        \(.*?\)     |   # Anything in parenthesis
+        \{.*?\}     |   # Anything in curlies
+        \s\.+       |   # Runs of periods
+        -\s\n?      |   # Word contractions (pretty iffy)
+        [+\^\*=<>"]         |   # Special characters
+        \s[[:punct:]]\s     |   # punctuation surrounded by whitespace
+        [[:upper:]]{2,}+    |   # Anything that's all uppercase
+        \w*?(tr|class|td){2,}\w*?  |   # tr, class, td multiple times in a row
+    "#,
+        )
+        .unwrap()
+    });
+    static REDUCE_SPACE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(
+            r#"(?x)
+        \n |
+        \s{2,}
+    "#,
+        )
+        .unwrap()
+    });
 
     info!("cleaning text");
+    let text = any_ascii::any_ascii(text);
 
-    RE.replace_all(text, "").to_string()
+    let text = text
+        .lines()
+        .map(|line| line.trim())
+        .collect::<Vec<&str>>()
+        .join("\n");
+
+    let text = REMOVE_SPACE_SPACE.replace_all(&text, "$1 ");
+
+    let mut text = REMOVE_CHARS.replace_all(&text, "").to_string();
+    for _ in 0..5 {
+        text = REMOVE_CHARS.replace_all(&text, "").to_string();
+    }
+
+    let text = REDUCE_SPACE.replace_all(&text, " ");
+    let text = REMOVE_LONG_WORDS.replace_all(&text, "");
+
+    text.to_string()
 }
 
 fn sentences(text: &str) -> Vec<&str> {
@@ -38,6 +97,11 @@ fn sentences(text: &str) -> Vec<&str> {
     let mut sentences = Vec::with_capacity(64);
 
     for sentence in cutters::cut(text, cutters::Language::English) {
+        info!("{sentence:?}");
+        if sentence.str.unicode_words().count() < 10 {
+            continue;
+        }
+
         sentences.push(sentence.str);
 
         for quote in sentence.quotes {
@@ -163,7 +227,7 @@ pub fn summarize(text: &str) -> String {
         }
     });
 
-    let ranks = pagerank(&probabilities, 0.85, 1E-4);
+    let ranks = pagerank(&probabilities, 0.85, 1E-6);
     let mut ranks: Vec<_> = ranks
         .into_iter()
         .enumerate()
@@ -172,7 +236,7 @@ pub fn summarize(text: &str) -> String {
 
     ranks.par_sort();
 
-    let mut top: Vec<_> = ranks.into_iter().rev().take(3).map(|(_, i)| i).collect();
+    let mut top: Vec<_> = ranks.into_iter().rev().take(4).map(|(_, i)| i).collect();
     top.sort();
 
     let top: Vec<_> = top.into_iter().map(|i| original_sentences[i]).collect();

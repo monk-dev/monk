@@ -28,6 +28,8 @@ enum Command {
     List,
     Get {
         id: String,
+        #[clap(short, long)]
+        body: bool,
     },
     Add {
         name: Option<String>,
@@ -95,10 +97,14 @@ async fn main() -> anyhow::Result<()> {
                 println!("{:?}: {:?}\n\t{:?}", item.id, item.name, item.summary);
             }
         }
-        Command::Get { id } => {
+        Command::Get { id, body } => {
             let item = monk.get(GetItem { id }).await?;
             if let Some(item) = item {
-                println!("{:?}: {:?}\n\t{:?}", item.id, item.name, item.summary);
+                if body {
+                    println!("{}", item.body.unwrap());
+                } else {
+                    println!("{:?}: {:?}\n\t{:?}", item.id, item.name, item.summary);
+                }
             } else {
                 println!("NOT FOUND");
             }
