@@ -97,7 +97,6 @@ fn sentences(text: &str) -> Vec<&str> {
     let mut sentences = Vec::with_capacity(64);
 
     for sentence in cutters::cut(text, cutters::Language::English) {
-        info!("{sentence:?}");
         if sentence.str.unicode_words().count() < 10 {
             continue;
         }
