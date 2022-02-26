@@ -10,9 +10,9 @@ checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
 name = "ab_glyph"
-version = "0.2.13"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61caed9aec6daeee1ea38ccf5fb225e4f96c1eeead1b4a5c267324a63cf02326"
+checksum = "d54a65e0d4f66f8536c98cb3ca81ca33b7e2ca43442465507a3a62291ec0d9e4"
 dependencies = [
  "ab_glyph_rasterizer",
  "owned_ttf_parser",
@@ -473,9 +473,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "295b6eb918a60a25fec0b23a5e633e74fddbaf7bb04411e65a10c366aca4b5cd"
+checksum = "5e068cb2806bbc15b439846dc16c5f89f8599f2c3e4d73d4449d38f9b2f0b6c5"
 dependencies = [
  "smallvec",
 ]
@@ -1040,7 +1040,7 @@ dependencies = [
 [[package]]
 name = "dioxus"
 version = "0.1.8"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
  "dioxus-core",
  "dioxus-core-macro",
@@ -1052,7 +1052,7 @@ dependencies = [
 [[package]]
 name = "dioxus-core"
 version = "0.1.9"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
  "backtrace",
  "bumpalo",
@@ -1071,7 +1071,7 @@ dependencies = [
 [[package]]
 name = "dioxus-core-macro"
 version = "0.1.7"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1082,11 +1082,13 @@ dependencies = [
 [[package]]
 name = "dioxus-desktop"
 version = "0.1.6"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
+ "core-foundation 0.9.3",
  "dioxus-core",
  "dioxus-html",
  "dioxus-interpreter-js",
+ "dunce",
  "futures-channel",
  "log",
  "mime_guess",
@@ -1101,15 +1103,17 @@ dependencies = [
 [[package]]
 name = "dioxus-hooks"
 version = "0.1.7"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
  "dioxus-core",
+ "futures-channel",
+ "log",
 ]
 
 [[package]]
 name = "dioxus-html"
 version = "0.1.6"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 dependencies = [
  "dioxus-core",
  "serde",
@@ -1119,7 +1123,7 @@ dependencies = [
 [[package]]
 name = "dioxus-interpreter-js"
 version = "0.0.0"
-source = "git+https://github.com/DioxusLabs/dioxus#f005ce20ac2dbdf45b63d698078a6cdace58fb1a"
+source = "git+https://github.com/DioxusLabs/dioxus#eadcd9232c734f7463570fcd7cd7c679b32b0320"
 
 [[package]]
 name = "discard"
@@ -1168,6 +1172,12 @@ checksum = "bde03329ae10e79ede66c9ce4dc930aa8599043b0743008548680f25b91502d6"
 dependencies = [
  "dtoa",
 ]
+
+[[package]]
+name = "dunce"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "453440c271cf5577fd2a40e4942540cb7d0d2f85e27c8d07dd0023c925a67541"
 
 [[package]]
 name = "eframe"
@@ -3238,9 +3248,9 @@ dependencies = [
 
 [[package]]
 name = "owned_ttf_parser"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ef05f2882a8b3e7acc10c153ade2631f7bfc8ce00d2bf3fb8f4e9d2ae6ea5c3"
+checksum = "4fb1e509cfe7a12db2a90bfa057dfcdbc55a347f5da677c506b53dd099cfec9d"
 dependencies = [
  "ttf-parser",
 ]
@@ -4886,7 +4896,7 @@ version = "6.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1a45a1c4c9015217e12347f2a411b57ce2c4fc543913b14b6fe40483328e709"
 dependencies = [
- "cfg-expr 0.10.1",
+ "cfg-expr 0.10.2",
  "heck 0.4.0",
  "pkg-config",
  "toml",
@@ -5400,9 +5410,9 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "ttf-parser"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ccbe8381883510b6a2d8f1e32905bddd178c11caef8083086d0c0c9ab0ac281"
+checksum = "c74c96594835e10fa545e2a51e8709f30b173a092bfd6036ef2cec53376244f3"
 
 [[package]]
 name = "twox-hash"
