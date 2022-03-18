@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AddItem {
-    pub name: Option<String>,
+    pub name: String,
     pub url: Option<String>,
     pub body: Option<String>,
     pub comment: Option<String>,

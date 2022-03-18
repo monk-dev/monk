@@ -16,9 +16,9 @@ pub fn current_schema() -> Schema {
     let mut builder = Schema::builder();
 
     let _ = builder.add_text_field("id", STORED | STRING);
-    let _ = builder.add_text_field("name", TEXT);
+    let _ = builder.add_text_field("name", STORED | TEXT);
     let _ = builder.add_text_field("url", TEXT);
-    let _ = builder.add_text_field("comment", TEXT);
+    let _ = builder.add_text_field("comment", STORED | TEXT);
     let _ = builder.add_text_field("body", STORED | TEXT);
     let _ = builder.add_text_field("title", TEXT);
     let _ = builder.add_text_field("extra", TEXT);

@@ -41,7 +41,7 @@ impl MonkTrait for Monk {
             .add_item(add.name, add.url, add.comment, add.tags)
             .await?;
 
-        let blob = if self.config.download.download_on_add {
+        let blob = if item.url.is_some() && self.config.download.download_on_add {
             Some(match self.downloader.download(&*self.store, &item).await {
                 Ok(blob) => blob,
                 Err(error) => {
