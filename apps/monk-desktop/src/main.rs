@@ -14,14 +14,9 @@ pub mod context;
 pub mod icons;
 
 use crate::{
-    components::{item::SearchItems, navbar::NavBar},
-    context::{
-        provide_monk_context, provide_search_context, use_monk_context, use_search_context,
-        MonkContext,
-    },
+    components::navbar::NavBar,
+    context::{provide_monk_context, provide_search_context, use_monk_context},
 };
-
-use self::components::item::Item;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -72,8 +67,8 @@ fn App(cx: Scope<AppProps>) -> Element {
 
     let tailwind = include_str!("../css/tailwindcss.js");
 
-    let search_ctx = use_search_context(&cx);
-    let query = search_ctx.read().query().to_string();
+    // let search_ctx = use_search_context(&cx);
+    // let query = search_ctx.read().query().to_string();
 
     rsx!(cx,
         script { "{tailwind}" }

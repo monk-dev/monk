@@ -1,12 +1,11 @@
-use std::{cmp::Reverse, sync::Arc};
+use std::cmp::Reverse;
 
 use dioxus::prelude::*;
 use monk::types::{Item, MonkTrait, Search, SearchResult};
 use ordered_float::NotNan;
-use tracing::info;
 
 use crate::{
-    context::{use_monk, use_monk_context, use_search_context, SearchContext},
+    context::{use_monk, use_monk_context},
     icons,
 };
 

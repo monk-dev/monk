@@ -1,4 +1,4 @@
-use dioxus::{events::onkeyup, prelude::*};
+use dioxus::prelude::*;
 use tracing::info;
 
 use crate::{context::use_search_context, icons};
