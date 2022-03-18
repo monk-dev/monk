@@ -7,7 +7,7 @@ use crate::{Blob, Tag};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Item {
     pub id: Uuid,
-    pub name: Option<String>,
+    pub name: String,
     pub url: Option<String>,
     pub body: Option<String>,
     pub comment: Option<String>,

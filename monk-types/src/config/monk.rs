@@ -15,7 +15,7 @@ pub struct MonkConfig {
 impl Default for MonkConfig {
     fn default() -> Self {
         Self {
-            log: true,
+            log: false,
             store: StoreConfig {
                 path: "sqlite:monk.sqlite".into(),
             },

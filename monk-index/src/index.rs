@@ -68,9 +68,6 @@ impl Index for MonkIndex {
         let resulting_docs: Vec<(f32, DocAddress)> =
             searcher.search(&query, &TopDocs::with_limit(count))?;
 
-        let mut snippet_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
-        snippet_generator.set_max_num_chars(120);
-
         let docs: Result<Vec<_>, _> = resulting_docs
             .into_iter()
             .map(|(score, address)| searcher.doc(address).map(|doc| (score, doc)))
@@ -93,10 +90,7 @@ impl Index for MonkIndex {
         let mut doc = tantivy::Document::new();
 
         doc.add_text(ID, &item.id);
-
-        if let Some(name) = &item.name {
-            doc.add_text(NAME, name);
-        }
+        doc.add_text(NAME, &item.name);
 
         if let Some(url) = &item.url {
             doc.add_text(URL, &url);
@@ -109,11 +103,17 @@ impl Index for MonkIndex {
         doc.add_date(FOUND, &item.created_at);
 
         for tag in tags {
-            doc.add_facet(TAG, &tag.tag);
+            if !tag.tag.starts_with("/") {
+                doc.add_facet(TAG, &format!("/{}", tag.tag));
+            } else {
+                doc.add_facet(TAG, &tag.tag);
+            }
         }
 
         if let Some(title) = extra.title {
             doc.add_text(TITLE, title);
+        } else {
+            doc.add_text(TITLE, &item.name);
         }
 
         if let Some(body) = extra.body {
@@ -150,8 +150,8 @@ fn create_search_results(
     query: &dyn Query,
     docs: &[(f32, Document)],
 ) -> anyhow::Result<Vec<SearchResult>> {
-    let mut title_generator = SnippetGenerator::create(&searcher, &*query, TITLE)?;
-    title_generator.set_max_num_chars(120);
+    let mut name_generator = SnippetGenerator::create(&searcher, &*query, NAME)?;
+    name_generator.set_max_num_chars(120);
 
     let mut body_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
     body_generator.set_max_num_chars(120);
@@ -168,7 +168,7 @@ fn create_search_results(
                 id,
                 score: *score,
                 snippets: Snippets {
-                    title: convert_snippet(title_generator.snippet_from_doc(&doc)),
+                    name: convert_snippet(name_generator.snippet_from_doc(&doc)),
                     body: convert_snippet(body_generator.snippet_from_doc(&doc)),
                     comment: convert_snippet(comment_generator.snippet_from_doc(&doc)),
                 },

@@ -20,7 +20,7 @@ pub fn Item(cx: Scope<ItemProps>) -> Element {
     // let (expanded, set_expanded) = use_state(&cx, || false);
     let item = &cx.props.item;
 
-    let item_name = item.name.as_deref().unwrap_or_default();
+    let item_name = &item.name;
     let item_created_at = item.created_at.format("%b %e, %Y").to_string();
     let item_summary = item.summary.as_deref();
     let item_comment = item.comment.as_deref();

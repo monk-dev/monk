@@ -10,7 +10,7 @@ pub trait Store {
 
     async fn add_item(
         &self,
-        name: Option<String>,
+        name: String,
         url: Option<String>,
         comment: Option<String>,
         tags: Vec<String>,

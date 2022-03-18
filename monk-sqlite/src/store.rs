@@ -117,7 +117,7 @@ impl Store for MonkSqlite {
 
     async fn add_item(
         &self,
-        name: Option<String>,
+        name: String,
         url: Option<String>,
         comment: Option<String>,
         tags: Vec<String>,
@@ -181,7 +181,7 @@ impl Store for MonkSqlite {
         };
 
         if let Some(name) = name {
-            item.name = Set(Some(name));
+            item.name = Set(name);
         }
 
         if let Some(url) = url {

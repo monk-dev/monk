@@ -17,7 +17,7 @@ pub struct SearchResult {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Snippets {
-    pub title: Snippet,
+    pub name: Snippet,
     pub body: Snippet,
     pub comment: Snippet,
 }
