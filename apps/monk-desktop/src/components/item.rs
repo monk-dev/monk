@@ -6,7 +6,7 @@ use ordered_float::NotNan;
 use tracing::info;
 
 use crate::{
-    context::{use_monk_context, use_search_context},
+    context::{use_monk, use_monk_context, use_search_context, SearchContext},
     icons,
 };
 
@@ -78,79 +78,120 @@ pub fn Item(cx: Scope<ItemProps>) -> Element {
     )
 }
 
-pub fn SearchItems<'a>(cx: Scope<'a>) -> Element<'a> {
+#[inline_props]
+pub fn SearchItems(cx: Scope, query: String) -> Element {
     let monk_ctx = use_monk_context(&cx);
-    let search_ctx = use_search_context(&cx);
 
-    let monk = Arc::clone(&monk_ctx.read().monk);
-    let query = search_ctx.read().query().to_string();
-    let fut_query = query.clone();
-    let search_results = use_future(&cx, || async move {
-        if !query.is_empty() {
-            info!("searching in monk");
-            let mut monk = monk.lock().await;
-            monk.search(Search { query, count: None }).await.map(Some)
+    let monk = use_monk(&cx);
+    let search_results = use_future(&cx, (query,), |(query,)| async move {
+        if query.is_empty() {
+            Ok(Vec::new())
         } else {
-            info!("skipping search");
-            Ok(None)
+            let mut monk = monk.lock().await;
+            monk.search(Search {
+                query: query.to_string(),
+                count: Some(10),
+            })
+            .await
         }
     });
 
-    let (query, set_query) = use_state(&cx, || search_ctx.read().query().to_string());
-    if query != &fut_query {
-        info!("restarting future");
-
-        set_query(fut_query);
-        search_results.restart();
-    }
-
-    match search_results.value() {
-        // Successful search, add contents
-        Some(Ok(Some(results))) => {
-            search_ctx.write().results = results
-                .iter()
-                .map(|res| (res.id.clone(), res.clone()))
-                .collect();
-        }
-        // No search was preformed, render normally
-        Some(Ok(None)) => {
-            search_ctx.write().results.clear();
-        }
-        Some(Err(e)) => {
-            return rsx!(cx, div { "Error Loading Items: {e}"});
-        }
-        // Loading
-        None => {
-            // is_loading = true;
-        }
+    let results = match search_results.value() {
+        Some(Ok(results)) => results.to_owned(),
+        Some(Err(error)) => return rsx!(cx, div { "Error: {error}" }),
+        None => return rsx!(cx, div { "Loading..." }),
     };
 
     let items = &monk_ctx.read().items;
-    let results = &search_ctx.read().results;
-    let mut items: Vec<(_, _)> = items
-        .iter()
-        .filter_map(move |item| {
-            if query.is_empty() || results.contains_key(&item.id) {
-                Some((item, results.get(&item.id)))
-            } else {
-                None
-            }
-        })
+    let mut item_results: Vec<(&Item, SearchResult)> = results
+        .into_iter()
+        .flat_map(|result| Some((items.get(&result.id)?, result)))
         .collect();
 
-    items.sort_by_key(|(item, search_result)| {
-        let score = search_result
-            .map(|res| NotNan::new(res.score).ok())
-            .unwrap_or_default();
-
-        Reverse((score, &item.created_at))
+    item_results.sort_by_key(|(item, result)| {
+        Reverse((NotNan::new(result.score).ok(), &item.name, &item.created_at))
     });
 
     rsx!(
         cx,
         div {
             class: "flex flex-col gap-4 my-2 col-start-3 col-end-11 justify-center",
-            items.into_iter().map(|(item, res)| rsx!(cx, Item { key: "{item.id}", item: item.clone(), search_result: res.cloned() }))
+            item_results.into_iter().map(|(item, res)| rsx!(cx, Item { key: "{item.id}", item: item.clone(), search_result: Some(res) }))
         }
     )
+
+    // let items =
+    // let monk_ctx = use_monk_context(&cx);
+
+    // let monk = Arc::clone(&monk_ctx.read().monk);
+    // let query = search_ctx.read().query().to_string();
+    // let fut_query = query.clone();
+    // let search_results = use_future(&cx, || async move {
+    //     if !query.is_empty() {
+    //         info!("searching in monk");
+    //         let mut monk = monk.lock().await;
+    //         monk.search(Search { query, count: None }).await.map(Some)
+    //     } else {
+    //         info!("skipping search");
+    //         Ok(None)
+    //     }
+    // });
+
+    // let (query, set_query) = use_state(&cx, || search_ctx.read().query().to_string());
+    // if query != &fut_query {
+    //     info!("restarting future");
+
+    //     set_query(fut_query);
+    //     search_results.restart();
+    // }
+
+    // match search_results.value() {
+    //     // Successful search, add contents
+    //     Some(Ok(Some(results))) => {
+    //         search_ctx.write().results = results
+    //             .iter()
+    //             .map(|res| (res.id.clone(), res.clone()))
+    //             .collect();
+    //     }
+    //     // No search was preformed, render normally
+    //     Some(Ok(None)) => {
+    //         search_ctx.write().results.clear();
+    //     }
+    //     Some(Err(e)) => {
+    //         return rsx!(cx, div { "Error Loading Items: {e}"});
+    //     }
+    //     // Loading
+    //     None => {
+    //         // is_loading = true;
+    //     }
+    // };
+
+    // let items = &monk_ctx.read().items;
+    // let results = &search_ctx.read().results;
+    // let mut items: Vec<(_, _)> = items
+    //     .iter()
+    //     .filter_map(move |item| {
+    //         if query.is_empty() || results.contains_key(&item.id) {
+    //             Some((item, results.get(&item.id)))
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .collect();
+
+    // items.sort_by_key(|(item, search_result)| {
+    //     let score = search_result
+    //         .map(|res| NotNan::new(res.score).ok())
+    //         .unwrap_or_default();
+
+    //     Reverse((score, &item.created_at))
+    // });
+
+    // rsx!(
+    //     cx,
+    //     div {
+    //         class: "flex flex-col gap-4 my-2 col-start-3 col-end-11 justify-center",
+    //         items.into_iter().map(|(item, res)| rsx!(cx, Item { key: "{item.id}", item: item.clone(), search_result: res.cloned() }))
+    //     }
+    // )
 }

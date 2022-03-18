@@ -15,7 +15,10 @@ pub mod icons;
 
 use crate::{
     components::{item::SearchItems, navbar::NavBar},
-    context::{provide_monk_context, provide_search_context, use_monk_context, MonkContext},
+    context::{
+        provide_monk_context, provide_search_context, use_monk_context, use_search_context,
+        MonkContext,
+    },
 };
 
 use self::components::item::Item;
@@ -54,16 +57,24 @@ fn App(cx: Scope<AppProps>) -> Element {
     let monk_ctx = use_monk_context(&cx);
 
     let monk_clone = Arc::clone(&monk_ctx.read().monk);
-    let items = use_future(&cx, || async move {
+    let items = use_future(&cx, (), |()| async move {
         let mut monk = monk_clone.lock().await;
         monk.list(Default::default()).await.unwrap()
     });
 
     if let Some(items) = items.value() {
-        monk_ctx.write().items = items.clone();
+        monk_ctx.write().items = items
+            .clone()
+            .into_iter()
+            .map(|item| (item.id.clone(), item))
+            .collect();
     }
 
     let tailwind = include_str!("../css/tailwindcss.js");
+
+    let search_ctx = use_search_context(&cx);
+    let query = search_ctx.read().query().to_string();
+
     rsx!(cx,
         script { "{tailwind}" }
         div {
@@ -73,7 +84,7 @@ fn App(cx: Scope<AppProps>) -> Element {
             //     class: "flex flex-col gap-4 my-2 col-start-3 col-end-11 justify-center",
             //     // SearchItems {},
             // }
-            SearchItems {}
+            // SearchItems { query: query }
         }
     )
 }

@@ -1,8 +1,11 @@
 use dioxus::prelude::*;
+use tracing::info;
 
 use crate::components::search_bar::SearchBar;
 
 pub fn NavBar<'i>(cx: Scope<'i>) -> Element {
+    info!("drawing navbar");
+
     rsx!(cx, div {
         class: "col-span-full border p-1",
         div {
