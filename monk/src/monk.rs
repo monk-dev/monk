@@ -151,7 +151,6 @@ impl MonkTrait for Monk {
     }
 
     async fn search(&mut self, search: Search) -> anyhow::Result<Vec<SearchResult>> {
-        self.index
-            .search(&search.query, search.count.unwrap_or(usize::MAX))
+        self.index.search(&search.query, search.count.unwrap_or(10))
     }
 }

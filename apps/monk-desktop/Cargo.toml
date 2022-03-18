@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
-dioxus = { version = "0.1.8", features = ["desktop"] }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", features = ["desktop"] }
 monk = { path = "../../monk" }
 monk-server = { path = "../monk-server" }
+ordered-float = "2.10.0"
 tokio = "1.17.0"
+tracing = "0.1.29"
+tracing-subscriber = { version = "0.3.7", features = ["env-filter"] }
+uuid = "0.8.2"

@@ -1,1 +1,0 @@
-sea-orm-cli generate entity -o monk-db/src/entities --with-serde both
