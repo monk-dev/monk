@@ -12,6 +12,7 @@ anyhow = "1.0.53"
 chrono = "0.4.19"
 clap = { version = "3.0.13", features = ["derive"] }
 colored = "2.0.0"
+dialoguer = "0.10.0"
 dotenv = "0.15.0"
 log = "0.4.14"
 monk = { path = "../../monk" }
