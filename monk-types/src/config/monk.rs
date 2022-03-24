@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ impl Default for MonkConfig {
             log: false,
             data_dir: "data".into(),
             store: StoreConfig {
-                path: "sqlite:monk.sqlite".into(),
+                path: "monk.sqlite".into(),
             },
             index: IndexConfig {
                 path: "index".into(),
@@ -37,15 +37,15 @@ impl Default for MonkConfig {
 }
 
 impl MonkConfig {
-    pub fn store_path(&self, config_folder: impl AsRef<Path>) -> PathBuf {
-        config_folder.as_ref().join(&self.store.path)
+    pub fn store_path(&self) -> PathBuf {
+        self.data_dir.join(&self.store.path)
     }
 
-    pub fn index_path(&self, config_folder: impl AsRef<Path>) -> PathBuf {
-        config_folder.as_ref().join(&self.index.path)
+    pub fn index_path(&self) -> PathBuf {
+        self.data_dir.join(&self.index.path)
     }
 
-    pub fn download_path(&self, config_folder: impl AsRef<Path>) -> PathBuf {
-        config_folder.as_ref().join(&self.download.path)
+    pub fn download_path(&self) -> PathBuf {
+        self.data_dir.join(&self.download.path)
     }
 }

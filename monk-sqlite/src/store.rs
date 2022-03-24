@@ -21,7 +21,10 @@ impl MonkSqlite {
         data_dir: impl AsRef<Path>,
         config: &StoreConfig,
     ) -> anyhow::Result<Self> {
-        let path = data_dir.as_ref().join(&config.path).display().to_string();
+        let mut path = data_dir.as_ref().join(&config.path).display().to_string();
+        if !path.starts_with("sqlite:") {
+            path = format!("sqlite:{path}");
+        }
 
         // Causes sqlx to create the database if it does not exist
         let path = format!("{path}?mode=rwc");

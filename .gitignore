@@ -1,6 +1,5 @@
 **/target/*
-index
-downloads
+test-install/*
 
 **/node_modules/*
 **/dist/*

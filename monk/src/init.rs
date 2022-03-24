@@ -14,12 +14,14 @@ pub fn get_or_create_config(config_folder: Option<&Path>) -> anyhow::Result<Monk
 #[tracing::instrument]
 fn config_from_path(config_folder: Option<&Path>) -> anyhow::Result<MonkConfig> {
     let config_path = config_file_path(config_folder)?;
-    info!(config_path=%config_path.display(), "config path");
+    info!(config_path=%config_path.display(), "config file path");
 
     if !config_path.exists() {
         info!("creating default config");
 
         let default_config = create_default_config()?;
+
+        std::fs::create_dir_all(config_path.parent().unwrap())?;
         std::fs::write(config_path, serde_yaml::to_string(&default_config)?)?;
 
         Ok(default_config)
@@ -38,8 +40,8 @@ pub fn config_file_path(config_folder: Option<impl AsRef<Path>>) -> anyhow::Resu
     } else {
         config_dir_from_env()?
     };
-    info!(path=%config_folder.display(), "config folder");
 
+    info!(path=%config_folder.display(), "config folder");
     let config_path = config_folder.join("monk.yml");
     Ok(if config_path.exists() {
         config_path
@@ -50,8 +52,8 @@ pub fn config_file_path(config_folder: Option<impl AsRef<Path>>) -> anyhow::Resu
 
 #[tracing::instrument]
 fn config_dir_from_env() -> anyhow::Result<PathBuf> {
-    if let Ok(path) = std::env::var("MONK_CONFIG_PATH") {
-        info!(%path, "using MONK_CONFIG_PATH");
+    if let Ok(path) = std::env::var("MONK_CONFIG_DIR") {
+        info!("using MONK_CONFIG_DIR");
         return Ok(path.into());
     }
 
@@ -60,21 +62,24 @@ fn config_dir_from_env() -> anyhow::Result<PathBuf> {
         return Ok(proj_dirs.config_dir().into());
     }
 
-    anyhow::bail!("Could not locate monk config dir. Please set `MONK_PATH`");
+    anyhow::bail!("Could not locate monk config dir. Please set `MONK_CONFIG_DIR`");
 }
 
 fn create_default_config() -> anyhow::Result<MonkConfig> {
     let mut config = MonkConfig::default();
-    config.data_dir = data_dir_from_env()?;
+    let data_dir = data_dir_from_env()?;
 
+    std::fs::create_dir_all(&data_dir)?;
+
+    config.data_dir = data_dir.canonicalize()?;
     Ok(config)
 }
 
 #[tracing::instrument]
 fn data_dir_from_env() -> anyhow::Result<PathBuf> {
-    if let Ok(path) = std::env::var("MONK_DATA_PATH") {
-        info!(%path, "using MONK_DATA_PATH");
-        return Ok(path.into());
+    if let Ok(path) = std::env::var("MONK_DATA_DIR") {
+        info!(%path, "using MONK_DATA_DIR");
+        return Ok(PathBuf::from(path));
     }
 
     if let Some(proj_dirs) = ProjectDirs::from("com", "Monk", "Monk") {
@@ -82,5 +87,5 @@ fn data_dir_from_env() -> anyhow::Result<PathBuf> {
         return Ok(proj_dirs.data_dir().into());
     }
 
-    anyhow::bail!("Could not locate monk config dir. Please set `MONK_DATA_PATH`");
+    anyhow::bail!("Could not locate monk config dir. Please set `MONK_DATA_DIR`");
 }

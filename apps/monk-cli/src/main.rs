@@ -23,9 +23,7 @@ async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
 
     let args = args::Args::parse();
-    let config = ensure_config(args.config)?;
-
-    if args.verbose || config.log {
+    if args.verbose {
         tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::from_default_env()
@@ -38,7 +36,12 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let mut monk = Monk::from_config(config).await?;
+    let (config, config_file, new_install) = ensure_config(args.config)?;
+    let mut monk = Monk::from_config(config.clone()).await?;
+
+    if new_install {
+        print_new_install_info(config_file, &config);
+    }
 
     match args.command {
         Command::List => {
@@ -259,15 +262,26 @@ fn highlight_text(text: &str, ranges: &[(usize, usize)]) -> String {
     highlighted_text.trim().replace("\n", " ")
 }
 
-fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<MonkConfig> {
+fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<(MonkConfig, PathBuf, bool)> {
     let config_file = monk::config_file_path(config_dir.as_ref())?;
+    let new_install = !config_file.exists();
 
-    if !config_file.exists() {
+    if new_install {
         println!(
-            "  No Monk config could be found. A new monk config will be \nplaced in: {}",
+            "  No monk data could be found. Monk will be initalized in: {}\n",
             config_file.parent().unwrap().display()
         );
     }
 
-    monk::get_or_create_config(config_dir.as_deref())
+    let config = monk::get_or_create_config(config_dir.as_deref())?;
+    Ok((config, config_file, new_install))
+}
+
+fn print_new_install_info(config_file: PathBuf, config: &MonkConfig) {
+    println!("  Monk successfully initalized!");
+    println!("    config file:\t{}", config_file.display(),);
+    println!("    data dir:\t\t{}", config.data_dir.display());
+    println!("\tindex:\t\t{}", config.index_path().display());
+    println!("\tdownloads:\t{}", config.download_path().display());
+    println!("\tstore:\t\t{}\n", config.store_path().display());
 }
