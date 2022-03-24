@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Context;
 use monk_types::config::StoreConfig;
 use monk_types::{Blob, Item, Store, Tag};
@@ -15,8 +17,11 @@ pub struct MonkSqlite {
 }
 
 impl MonkSqlite {
-    pub async fn from_config(config: &StoreConfig) -> anyhow::Result<Self> {
-        let path = config.path.display().to_string();
+    pub async fn from_config(
+        data_dir: impl AsRef<Path>,
+        config: &StoreConfig,
+    ) -> anyhow::Result<Self> {
+        let path = data_dir.as_ref().join(&config.path).display().to_string();
 
         // Causes sqlx to create the database if it does not exist
         let path = format!("{path}?mode=rwc");

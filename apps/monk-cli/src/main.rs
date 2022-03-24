@@ -1,82 +1,29 @@
-use std::fmt::Write;
-use std::fs::File;
-use std::path::PathBuf;
+mod args;
 
+use std::{fmt::Write, path::PathBuf};
+
+use args::Command;
 use colored::{Color, Colorize};
-use monk::types::{config::MonkConfig, Item, SearchResult};
 use monk::types::{
-    AddItem, CreateLink, DeleteItem, DeleteLink, GetBlob, GetItem, LinkedItems, ListItem,
-    MonkTrait, Search,
+    config::MonkConfig, AddItem, CreateLink, DeleteItem, DeleteLink, GetBlob, GetItem, LinkedItems,
+    ListItem, MonkTrait, Search,
 };
+use monk::types::{Item, SearchResult};
 use monk::Monk;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::util::SubscriberInitExt;
 
 const COLORS: &'static [Color] = &[Color::Green, Color::Cyan, Color::White, Color::Yellow];
 
-#[derive(Debug, Parser)]
-struct Args {
-    #[clap(short, long)]
-    pub config: Option<PathBuf>,
-    #[clap(short, long)]
-    pub verbose: bool,
-    #[clap(subcommand)]
-    pub command: Command,
-}
-
-#[derive(Debug, Subcommand)]
-enum Command {
-    List,
-    Get {
-        id: String,
-        #[clap(short, long)]
-        body: bool,
-    },
-    Add {
-        name: String,
-        url: Option<String>,
-        comment: Option<String>,
-        #[clap(short, long, multiple_values = true)]
-        tags: Vec<String>,
-    },
-    Delete {
-        id: String,
-    },
-    LinkedItems {
-        id: String,
-    },
-    Link {
-        a: String,
-        b: String,
-    },
-    Unlink {
-        a: String,
-        b: String,
-    },
-    Open {
-        id: String,
-    },
-    Search {
-        #[clap(short, long, default_value = "1")]
-        count: usize,
-        /// A properly structured search query
-        query: Vec<String>,
-    },
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    dotenv::dotenv().ok();
 
-    let config: MonkConfig = if let Some(config_path) = args.config {
-        let file = File::open(config_path)?;
-        serde_yaml::from_reader(file)?
-    } else {
-        MonkConfig::default()
-    };
+    let args = args::Args::parse();
+    let config = ensure_config(args.config)?;
 
     if args.verbose || config.log {
         tracing_subscriber::fmt()
@@ -310,4 +257,17 @@ fn highlight_text(text: &str, ranges: &[(usize, usize)]) -> String {
 
     highlighted_text.push_str(&text[start_from..]);
     highlighted_text.trim().replace("\n", " ")
+}
+
+fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<MonkConfig> {
+    let config_file = monk::config_file_path(config_dir.as_ref())?;
+
+    if !config_file.exists() {
+        println!(
+            "  No Monk config could be found. A new monk config will be \nplaced in: {}",
+            config_file.parent().unwrap().display()
+        );
+    }
+
+    monk::get_or_create_config(config_dir.as_deref())
 }

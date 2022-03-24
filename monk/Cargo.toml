@@ -7,11 +7,13 @@ edition = "2021"
 anyhow = "1.0.53"
 async-trait = "0.1.52"
 chrono = "0.4.19"
-monk-types = { path = "../monk-types" }
+directories = "4.0.1"
 monk-dl = { path = "../monk-dl" }
 monk-index = { path = "../monk-index" }
 monk-sqlite = { path = "../monk-sqlite" }
 monk-summary = { path = "../monk-summary" }
+monk-types = { path = "../monk-types" }
+serde_yaml = "0.8.23"
 thiserror = "1.0.30"
 tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.29"

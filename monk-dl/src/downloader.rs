@@ -11,18 +11,24 @@ use tracing::info;
 use crate::html::{MonolithDownloader, DEFAULT_USER_AGENT};
 
 pub struct MonkDownloader {
-    config: DownloadConfig,
+    _config: DownloadConfig,
+    data_dir: PathBuf,
     html: Box<dyn HtmlDownloader + Send + Sync>,
 }
 
 impl MonkDownloader {
-    pub async fn from_config(config: &DownloadConfig) -> anyhow::Result<Self> {
-        tokio::fs::create_dir_all(&config.path).await?;
+    pub async fn from_config(
+        data_dir: impl AsRef<Path>,
+        config: &DownloadConfig,
+    ) -> anyhow::Result<Self> {
+        let path = data_dir.as_ref().join(&config.path);
+        tokio::fs::create_dir_all(&path).await?;
 
-        let html = Box::new(MonolithDownloader::new(config.path.clone()));
+        let html = Box::new(MonolithDownloader::new(path.clone()));
 
         Ok(Self {
-            config: config.clone(),
+            _config: config.clone(),
+            data_dir: path,
             html,
         })
     }
@@ -34,7 +40,7 @@ impl MonkDownloader {
             bail!("item must have a path");
         };
 
-        let path = self.config.path.join(item.id.to_string());
+        let path = self.data_dir.join(item.id.to_string());
         let file = File::create(&path).await?;
         let mut writer = BufWriter::new(file);
 
