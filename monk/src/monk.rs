@@ -18,10 +18,11 @@ pub struct Monk {
 
 impl Monk {
     pub async fn from_config(config: MonkConfig) -> anyhow::Result<Self> {
-        let store = Box::new(MonkSqlite::from_config(&config.store).await?);
-        let index = Box::new(MonkIndex::from_config(&config.index).await?);
+        let store = Box::new(MonkSqlite::from_config(&config.data_dir, &config.store).await?);
+        let index = Box::new(MonkIndex::from_config(&config.data_dir, &config.index).await?);
         let extractor = Box::new(MonkExtractor::default());
-        let downloader = Box::new(MonkDownloader::from_config(&config.download).await?);
+        let downloader =
+            Box::new(MonkDownloader::from_config(&config.data_dir, &config.download).await?);
 
         Ok(Self {
             config,
@@ -55,15 +56,13 @@ impl MonkTrait for Monk {
 
         if self.config.index.index_on_add {
             let extracted = self.extractor.extract_info(&item, blob.as_ref()).await?;
-            let tags = self.store.item_tags(item.id.clone()).await?;
-
             info!(?extracted);
 
             // remove any previous information
             self.index.remove(item.id.clone())?;
 
             self.index
-                .index_full(&item, &tags, extracted.clone().unwrap_or_default())?;
+                .index_full(&item, extracted.clone().unwrap_or_default())?;
 
             // If a body, the textual representation of the item, was extracted,
             // add it to the item model.

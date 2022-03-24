@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Context;
 use monk_types::{config::IndexConfig, Snippets};
-use monk_types::{ExtractedInfo, Index, Item, SearchResult, Snippet, Tag};
+use monk_types::{ExtractedInfo, Index, Item, SearchResult, Snippet};
 use tantivy::query::QueryParser;
 use tantivy::{collector::TopDocs, Document};
 use tantivy::{directory::MmapDirectory, query::Query, Searcher};
@@ -20,8 +20,11 @@ pub struct MonkIndex {
 }
 
 impl MonkIndex {
-    pub async fn from_config(config: &IndexConfig) -> anyhow::Result<Self> {
-        MonkIndex::new(&config.path)
+    pub async fn from_config(
+        data_dir: impl AsRef<Path>,
+        config: &IndexConfig,
+    ) -> anyhow::Result<Self> {
+        MonkIndex::new(data_dir.as_ref().join(&config.path))
     }
 
     pub fn new(path: impl AsRef<Path>) -> anyhow::Result<Self> {
@@ -79,12 +82,7 @@ impl Index for MonkIndex {
         Ok(results)
     }
 
-    fn index_full(
-        &mut self,
-        item: &Item,
-        tags: &[Tag],
-        extra: ExtractedInfo,
-    ) -> anyhow::Result<()> {
+    fn index_full(&mut self, item: &Item, extra: ExtractedInfo) -> anyhow::Result<()> {
         tracing::info!("Indexing: {}", &item.id);
 
         let mut doc = tantivy::Document::new();
@@ -102,7 +100,7 @@ impl Index for MonkIndex {
 
         doc.add_date(FOUND, &item.created_at);
 
-        for tag in tags {
+        for tag in &item.tags {
             if !tag.tag.starts_with("/") {
                 doc.add_facet(TAG, &format!("/{}", tag.tag));
             } else {
