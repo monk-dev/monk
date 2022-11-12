@@ -8,18 +8,17 @@ name = "monk"
 path = "./src/main.rs"
 
 [dependencies]
-anyhow = "1.0.53"
-chrono = "0.4.19"
-clap = { version = "3.0.13", features = ["derive"] }
-colored = "2.0.0"
-dialoguer = "0.10.0"
-dotenv = "0.15.0"
-log = "0.4.14"
-monk = { path = "../../monk" }
-open = "2.0.2"
-serde_yaml = "0.8.23"
-thiserror = "1.0.30"
-tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
-tracing = "0.1.29"
-tracing-subscriber = { version = "0.3.7", features = ["env-filter"] }
-uuid = "0.8.2"
+anyhow = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+colored = { workspace = true }
+dialoguer = { workspace = true }
+dotenv = { workspace = true }
+monk = { workspace = true }
+open = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+uuid = { workspace = true }

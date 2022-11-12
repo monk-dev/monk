@@ -36,6 +36,7 @@ pub enum Command {
     /// # Examples
     ///
     /// monk add "My cool article" https://example.com
+    ///
     /// monk add "This article has tags" https://article.com -t kernel networking rust
     Add {
         /// The name of the item
@@ -51,7 +52,7 @@ pub enum Command {
         /// # Examples
         ///
         /// monk add "This article has tags" https://article.com -t kernel networking rust
-        #[clap(short, long, multiple_values = true)]
+        #[clap(short, long)]
         tags: Vec<String>,
     },
     /// Delete an item by ID from Monk's store. This will remove the item

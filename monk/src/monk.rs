@@ -20,7 +20,7 @@ impl Monk {
     pub async fn from_config(config: MonkConfig) -> anyhow::Result<Self> {
         let store = Box::new(MonkSqlite::from_config(&config.data_dir, &config.store).await?);
         let index = Box::new(MonkIndex::from_config(&config.data_dir, &config.index).await?);
-        let extractor = Box::new(MonkExtractor::default());
+        let extractor = Box::<MonkExtractor>::default();
         let downloader =
             Box::new(MonkDownloader::from_config(&config.data_dir, &config.download).await?);
 
@@ -59,7 +59,7 @@ impl MonkTrait for Monk {
             info!(?extracted);
 
             // remove any previous information
-            self.index.remove(item.id.clone())?;
+            self.index.remove(item.id)?;
 
             self.index
                 .index_full(&item, extracted.clone().unwrap_or_default())?;
@@ -85,7 +85,7 @@ impl MonkTrait for Monk {
 
                 item = self
                     .store
-                    .update_item(item.id.clone(), None, None, info.body, summary, None)
+                    .update_item(item.id, None, None, info.body, summary, None)
                     .await?
                     .ok_or_else(|| anyhow::anyhow!("item should be present"))?;
             }

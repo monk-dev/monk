@@ -1,6 +1,9 @@
 mod args;
 
-use std::{fmt::Write, path::PathBuf};
+use std::{
+    fmt::Write,
+    path::{Path, PathBuf},
+};
 
 use args::Command;
 use colored::{Color, Colorize};
@@ -17,10 +20,12 @@ use tracing::metadata::LevelFilter;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::util::SubscriberInitExt;
 
-const COLORS: &'static [Color] = &[Color::Green, Color::Cyan, Color::White, Color::Yellow];
+const COLORS: &[Color] = &[Color::Green, Color::Cyan, Color::White, Color::Yellow];
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Only use dotenv when developing
+    #[cfg(debug_assertions)]
     dotenv::dotenv().ok();
 
     let args = args::Args::parse();
@@ -86,6 +91,8 @@ async fn main() -> anyhow::Result<()> {
             if let Some(ref url) = url {
                 println!("\t{}{}", "url: ".bold(), url);
             }
+
+            println!();
 
             let item = monk
                 .add(AddItem {
@@ -323,12 +330,12 @@ fn highlight_text(text: &str, ranges: &[(usize, usize)]) -> String {
 
     for (start, end) in ranges.iter().copied() {
         highlighted_text.push_str(&text[start_from..start]);
-        highlighted_text.push_str(&text[start..end].yellow().to_string());
+        highlighted_text.push_str(&text[start..end].yellow());
         start_from = end;
     }
 
     highlighted_text.push_str(&text[start_from..]);
-    highlighted_text.trim().replace("\n", " ")
+    highlighted_text.trim().replace('\n', " ")
 }
 
 fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<(MonkConfig, PathBuf, bool)> {
@@ -346,7 +353,7 @@ fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<(MonkConfig, Pat
     Ok((config, config_file, new_install))
 }
 
-fn print_new_install_info(config_file: &PathBuf, config: &MonkConfig) {
+fn print_new_install_info(config_file: &Path, config: &MonkConfig) {
     println!("  Monk successfully initalized!");
     println!("    config file:\t{}", config_file.display(),);
     println!("    data dir:\t\t{}", config.data_dir.display());

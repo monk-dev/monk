@@ -57,7 +57,7 @@ fn config_dir_from_env() -> anyhow::Result<PathBuf> {
         return Ok(path.into());
     }
 
-    if let Some(proj_dirs) = ProjectDirs::from("com", "Monk", "Monk") {
+    if let Some(proj_dirs) = ProjectDirs::from("rs", "Monk", "Monk") {
         info!(path = %proj_dirs.config_dir().display(), "using project dirs path");
         return Ok(proj_dirs.config_dir().into());
     }

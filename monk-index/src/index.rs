@@ -30,7 +30,7 @@ impl MonkIndex {
     pub fn new(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let path = path.as_ref();
 
-        std::fs::create_dir_all(&path)?;
+        std::fs::create_dir_all(path)?;
         tracing::info!("schema version: {}", SCHEMA_VERSION);
 
         let schema = current_schema();
@@ -66,7 +66,7 @@ impl Index for MonkIndex {
             vec![ID, NAME, URL, COMMENT, BODY, TITLE, EXTRA],
         );
 
-        let query = query_parser.parse_query(&query)?;
+        let query = query_parser.parse_query(query)?;
 
         let resulting_docs: Vec<(f32, DocAddress)> =
             searcher.search(&query, &TopDocs::with_limit(count))?;
@@ -78,7 +78,7 @@ impl Index for MonkIndex {
 
         let docs = &docs?;
 
-        let results = create_search_results(&searcher, &query, &docs)?;
+        let results = create_search_results(&searcher, &query, docs)?;
         Ok(results)
     }
 
@@ -87,21 +87,24 @@ impl Index for MonkIndex {
 
         let mut doc = tantivy::Document::new();
 
-        doc.add_text(ID, &item.id);
+        doc.add_text(ID, item.id);
         doc.add_text(NAME, &item.name);
 
         if let Some(url) = &item.url {
-            doc.add_text(URL, &url);
+            doc.add_text(URL, url);
         }
 
         if let Some(comment) = &item.comment {
             doc.add_text(COMMENT, comment);
         }
 
-        doc.add_date(FOUND, &item.created_at);
+        doc.add_date(
+            FOUND,
+            tantivy::DateTime::from_unix_timestamp(item.created_at.timestamp()),
+        );
 
         for tag in &item.tags {
-            if !tag.tag.starts_with("/") {
+            if !tag.tag.starts_with('/') {
                 doc.add_facet(TAG, &format!("/{}", tag.tag));
             } else {
                 doc.add_facet(TAG, &tag.tag);
@@ -122,7 +125,7 @@ impl Index for MonkIndex {
             doc.add_text(EXTRA, extra);
         }
 
-        self.writer.add_document(doc);
+        let _ = self.writer.add_document(doc);
         self.writer.commit().context("committing item document")?;
 
         Ok(())
@@ -148,27 +151,27 @@ fn create_search_results(
     query: &dyn Query,
     docs: &[(f32, Document)],
 ) -> anyhow::Result<Vec<SearchResult>> {
-    let mut name_generator = SnippetGenerator::create(&searcher, &*query, NAME)?;
+    let mut name_generator = SnippetGenerator::create(searcher, query, NAME)?;
     name_generator.set_max_num_chars(120);
 
-    let mut body_generator = SnippetGenerator::create(&searcher, &*query, BODY)?;
+    let mut body_generator = SnippetGenerator::create(searcher, query, BODY)?;
     body_generator.set_max_num_chars(120);
 
-    let mut comment_generator = SnippetGenerator::create(&searcher, &*query, COMMENT)?;
+    let mut comment_generator = SnippetGenerator::create(searcher, query, COMMENT)?;
     comment_generator.set_max_num_chars(120);
 
     let results: Vec<SearchResult> = docs
         .iter()
         .flat_map(|(score, doc)| {
-            let id = doc.get_first(ID)?.text()?.parse().ok()?;
+            let id = doc.get_first(ID)?.as_text()?.parse().ok()?;
 
             Some(SearchResult {
                 id,
                 score: *score,
                 snippets: Snippets {
-                    name: convert_snippet(name_generator.snippet_from_doc(&doc)),
-                    body: convert_snippet(body_generator.snippet_from_doc(&doc)),
-                    comment: convert_snippet(comment_generator.snippet_from_doc(&doc)),
+                    name: convert_snippet(name_generator.snippet_from_doc(doc)),
+                    body: convert_snippet(body_generator.snippet_from_doc(doc)),
+                    comment: convert_snippet(comment_generator.snippet_from_doc(doc)),
                 },
             })
         })
@@ -179,7 +182,7 @@ fn create_search_results(
 
 pub fn convert_snippet(snippet: tantivy::Snippet) -> Snippet {
     Snippet {
-        fragment: snippet.fragments().to_string(),
+        fragment: snippet.fragment().to_string(),
         highlighted: snippet
             .highlighted()
             .iter()

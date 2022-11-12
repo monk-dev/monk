@@ -42,7 +42,7 @@ impl MonkExtractor {
         info!("extracting from pdf");
 
         let path = blob.path.clone();
-        let text = tokio::task::spawn_blocking(move || extract_text(&path)).await??;
+        let text = tokio::task::spawn_blocking(move || extract_text(path)).await??;
 
         // Title is sometimes the first line of academic PDFs:
         let title = text.lines().next().map(ToString::to_string);

@@ -4,19 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.53"
-async-trait = "0.1.52"
-lopdf = "*"
-mime = "0.3.16"
-monk-types = { path = "../monk-types" }
-ndarray = "0.15.4"
-pdf-extract = { git = "https://github.com/fisherdarling/pdf-extract", rev = "3e013fcac3da0f2ccf25d3b33571189e1d3ce847" }
-scraper = "0.12.0"
-serde = { version = "1.0.136", features = ["derive"] }
-tantivy = "0.16.1"
-thiserror = "1.0.30"
-tokio = { version = "1.16.1", features = ["fs"] }
-tracing = "0.1.29"
-tracing-subscriber = "0.3.7"
-unicode-segmentation = "1.3.0"
-uuid = "0.8.2"
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+lopdf = { workspace = true }
+mime = { workspace = true }
+monk-types = { workspace = true }
+ndarray = { workspace = true }
+pdf-extract = { workspace = true }
+scraper = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tantivy = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+unicode-segmentation = { workspace = true }
+uuid = { workspace = true }

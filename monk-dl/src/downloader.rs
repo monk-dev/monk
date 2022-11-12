@@ -77,7 +77,7 @@ impl Downloader for MonkDownloader {
         let mut managed = true;
         let mut mime_type = mime_guess::from_path(url).first_or(mime::TEXT_HTML_UTF_8);
 
-        let path = if let Ok(_) = tokio::fs::metadata(url).await {
+        let path = if tokio::fs::metadata(url).await.is_ok() {
             // This is a local path, instruct the store not to delete it if the blob is deleted:
             managed = false;
 
@@ -87,16 +87,16 @@ impl Downloader for MonkDownloader {
 
             if mime_type == mime::TEXT_HTML_UTF_8 {
                 // If it's specifically html, download with monolith
-                match self.html.download_html(&item).await {
+                match self.html.download_html(item).await {
                     Ok(path) => path,
                     Err(error) => {
                         info!(%error, "error downloading as html, falling back to `get`");
-                        self.download_get(&item).await?.canonicalize()?
+                        self.download_get(item).await?.canonicalize()?
                     }
                 }
             } else {
                 // Download with a normal GET
-                self.download_get(&item).await?.canonicalize()?
+                self.download_get(item).await?.canonicalize()?
             }
         } else {
             anyhow::bail!("unsupported file schema")
@@ -106,7 +106,7 @@ impl Downloader for MonkDownloader {
         let infer_path = path.clone();
 
         let type_opt =
-            tokio::task::spawn_blocking(move || infer::get_from_path(&infer_path)).await??;
+            tokio::task::spawn_blocking(move || infer::get_from_path(infer_path)).await??;
 
         if let Some(ty) = type_opt {
             mime_type = ty.mime_type().parse()?;
@@ -119,7 +119,7 @@ impl Downloader for MonkDownloader {
 
         store
             .add_blob(
-                item.id.clone(),
+                item.id,
                 url.to_string(),
                 hash,
                 mime_type.to_string(),
@@ -136,6 +136,8 @@ async fn calculate_hash(path: impl AsRef<Path>) -> anyhow::Result<String> {
 
     let mut hasher = Sha256::new();
     let mut buffer = Vec::with_capacity(4096);
+    buffer.fill(0);
+
     loop {
         let count = reader.read(&mut buffer).await?;
         if count == 0 {
