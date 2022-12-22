@@ -112,7 +112,7 @@ fn sentences(text: &str) -> Vec<&str> {
 }
 
 pub fn summarize(text: &str) -> String {
-    let cleaned = clean(&text);
+    let cleaned = clean(text);
     let original_sentences = sentences(&cleaned);
     let sentences: Vec<_> = original_sentences
         .par_iter()
@@ -141,7 +141,7 @@ pub fn summarize(text: &str) -> String {
         .collect();
 
     let global_stem_freqs = sentence_stem_freqs.clone().into_par_iter().reduce(
-        || HashMap::new(),
+        HashMap::new,
         |mut freqs, sentence_freqs| {
             for (stem, count) in sentence_freqs.into_iter() {
                 *freqs.entry(stem).or_default() += count;

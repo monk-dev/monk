@@ -7,7 +7,46 @@ members = [
     "monk-dl",
     "monk-summary",
     "apps/monk-cli", 
-    "apps/monk-egui", 
-    "apps/monk-server",
-    "apps/monk-desktop"
+    # "apps/monk-egui", 
+    # "apps/monk-server",
+    # "apps/monk-desktop"
 ]
+
+[workspace.dependencies]
+monk = { path = "monk" }
+monk-dl = { path = "monk-dl" }
+monk-index = { path = "monk-index" }
+monk-sqlite = { path = "monk-sqlite" }
+monk-summary = { path = "monk-summary" }
+monk-types = { path = "monk-types" }
+
+anyhow = "1.0"
+async-trait = "0.1"
+chrono = "0.4"
+clap = "4.0"
+colored = "2.0"
+dialoguer = "0.10"
+directories = "4.0"
+dotenv = "0.15"
+infer = "0.11"
+lopdf = "0.29"
+mime = "0.3"
+mime_guess = "2.0"
+monolith = { git = "https://github.com/Y2Z/monolith", rev = "1c71e708e1e343ac2bace250e698966abbba1568" }
+open = "3.0"
+pdf-extract = { git = "https://github.com/fisherdarling/pdf-extract", rev = "3e013fcac3da0f2ccf25d3b33571189e1d3ce847" }
+reqwest = "0.11"
+scraper = "0.13.0"
+sea-orm = { version = "0.10" }
+serde = { version = "1.0" }
+serde_yaml = "0.9"
+sha2 = "0.10"
+sqlx = { version = "0.6" }
+tantivy = "0.18"
+tokio = { version = "1.16" }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+unicode-segmentation = "1.3.0"
+uuid = "1.2"
+ndarray = "0.15.4"

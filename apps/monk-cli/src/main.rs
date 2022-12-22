@@ -1,84 +1,35 @@
-use std::fmt::Write;
-use std::fs::File;
-use std::path::PathBuf;
+mod args;
 
-use colored::{Color, Colorize};
-use monk::types::{config::MonkConfig, Item, SearchResult};
-use monk::types::{
-    AddItem, CreateLink, DeleteItem, DeleteLink, GetBlob, GetItem, LinkedItems, ListItem,
-    MonkTrait, Search,
+use std::{
+    fmt::Write,
+    path::{Path, PathBuf},
 };
+
+use args::Command;
+use colored::{Color, Colorize};
+use dialoguer::Confirm;
+use monk::types::{
+    config::MonkConfig, AddItem, CreateLink, DeleteItem, DeleteLink, GetItem, LinkedItems,
+    ListItem, MonkTrait, Search,
+};
+use monk::types::{Item, SearchResult};
 use monk::Monk;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::util::SubscriberInitExt;
 
-const COLORS: &'static [Color] = &[Color::Green, Color::Cyan, Color::White, Color::Yellow];
-
-#[derive(Debug, Parser)]
-struct Args {
-    #[clap(short, long)]
-    pub config: Option<PathBuf>,
-    #[clap(short, long)]
-    pub verbose: bool,
-    #[clap(subcommand)]
-    pub command: Command,
-}
-
-#[derive(Debug, Subcommand)]
-enum Command {
-    List,
-    Get {
-        id: String,
-        #[clap(short, long)]
-        body: bool,
-    },
-    Add {
-        name: String,
-        url: Option<String>,
-        comment: Option<String>,
-        #[clap(short, long, multiple_values = true)]
-        tags: Vec<String>,
-    },
-    Delete {
-        id: String,
-    },
-    LinkedItems {
-        id: String,
-    },
-    Link {
-        a: String,
-        b: String,
-    },
-    Unlink {
-        a: String,
-        b: String,
-    },
-    Open {
-        id: String,
-    },
-    Search {
-        #[clap(short, long, default_value = "1")]
-        count: usize,
-        /// A properly structured search query
-        query: Vec<String>,
-    },
-}
+const COLORS: &[Color] = &[Color::Green, Color::Cyan, Color::White, Color::Yellow];
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    // Only use dotenv when developing
+    #[cfg(debug_assertions)]
+    dotenv::dotenv().ok();
 
-    let config: MonkConfig = if let Some(config_path) = args.config {
-        let file = File::open(config_path)?;
-        serde_yaml::from_reader(file)?
-    } else {
-        MonkConfig::default()
-    };
-
-    if args.verbose || config.log {
+    let args = args::Args::parse();
+    if args.verbose {
         tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::from_default_env()
@@ -91,16 +42,33 @@ async fn main() -> anyhow::Result<()> {
             .init();
     }
 
-    let mut monk = Monk::from_config(config).await?;
+    let (config, config_file, new_install) = ensure_config(args.config)?;
+    let mut monk = Monk::from_config(config.clone()).await?;
+
+    if new_install {
+        print_new_install_info(&config_file, &config);
+    }
 
     match args.command {
         Command::List => {
+            println!("{}", "Listing Items\n".bright_green().bold());
             let items = monk.list(ListItem::default()).await?;
 
             let output: Result<Vec<String>, _> = items.iter().map(item_display_string).collect();
-            print!("{}", output?.join("\n"));
+            let output = output?.join("\n");
+
+            if !output.is_empty() {
+                print!("{output}");
+            } else {
+                println!(
+                    "Monk has no items.\n{}{}",
+                    "tip: ".bold(),
+                    "Run `monk add --help` to learn how to add an item.".italic()
+                );
+            }
         }
         Command::Get { id, body } => {
+            println!("{}{}", "Getting Item: ".bright_green().bold(), id);
             let item = monk.get(GetItem { id }).await?;
             if let Some(item) = item {
                 if body {
@@ -109,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
                     println!("{}", item_display_string(&item)?);
                 }
             } else {
-                println!("NOT FOUND");
+                println!("{}", "Item not found".red().italic());
             }
         }
         Command::Add {
@@ -118,6 +86,14 @@ async fn main() -> anyhow::Result<()> {
             comment,
             tags,
         } => {
+            println!("  {} {:?} to monk", "Adding".bright_green().bold(), name);
+
+            if let Some(ref url) = url {
+                println!("\t{}{}", "url: ".bold(), url);
+            }
+
+            println!();
+
             let item = monk
                 .add(AddItem {
                     name,
@@ -171,21 +147,44 @@ async fn main() -> anyhow::Result<()> {
             print!("Linked {a} to {b}");
         }
         Command::Open { id } => {
-            println!("opening: {id}");
-            if let Some(blob) = monk.get_blob(GetBlob::ItemId(id.clone())).await? {
-                match open::that(&blob.path) {
-                    Ok(_) => print!("opened: {blob:?}"),
-                    Err(e) => println!("unable to open: {blob:?}, {e}"),
-                };
-            } else {
-                print!("no blob found: {id}");
+            println!("  {}{id}", "Opening: ".bright_green().bold());
+
+            let item = monk.get(GetItem { id }).await?;
+
+            if let Some(item) = item {
+                println!("  {}{}", "Found Item: ".bright_green().bold(), item.name);
+
+                if let Some(blob) = item.blob {
+                    println!("   {}{}", "Found Blob: ".bright_green().bold(), blob.id);
+                    println!("    {}", "Opening Blob".bright_green().bold());
+                    match open::that(&blob.path) {
+                        Ok(_) => println!(
+                            "  {}{}",
+                            "Successfully opened: ".bright_green().bold(),
+                            item.name
+                        ),
+                        Err(e) => println!("  {}{}\n\t{}", "Unable to open: ".red(), item.name, e),
+                    };
+                } else {
+                    println!("  {}\n", "Item is not downloaded".red());
+                    println!(
+                        "To download the item, run:\n\n\tmonk download {}\n\n",
+                        item.id
+                    );
+                }
             }
         }
         Command::Search { count, query } => {
+            let query = query.join(" ");
+            println!(
+                "  {}{query}\n",
+                "Searching monk with query: ".bright_green().bold()
+            );
+
             let results = monk
                 .search(Search {
                     count: Some(count),
-                    query: query.join(" "),
+                    query,
                 })
                 .await?;
 
@@ -202,6 +201,29 @@ async fn main() -> anyhow::Result<()> {
             }
 
             print!("{}", result_strings.join("\n"));
+        }
+        Command::Config => {
+            println!("config file: {}\n", config_file.display());
+            print!("{}", serde_yaml::to_string(&config)?);
+        }
+        Command::Clean { choice } => {
+            println!(
+                "  {}{:?}, {} this action is {}",
+                "Cleaning: ".bright_green().bold(),
+                choice,
+                "WARNING:".bright_yellow().bold(),
+                "NON REVERSIBLE".bright_red().italic()
+            );
+
+            if Confirm::new()
+                .wait_for_newline(true)
+                .default(false)
+                .with_prompt(&format!("  Clean {:?}?", choice))
+                .interact()?
+            {
+                println!("  {}{:?}", "Cleaning: ".bright_blue().bold(), choice);
+                println!("unimplemented");
+            }
         }
     }
 
@@ -226,35 +248,24 @@ fn item_display_string_inner(
     if let Some(search_result) = search_result {
         write!(
             title,
-            "({}) ",
+            "  ({}) ",
             format!("{:2.2}", search_result.score).purple()
         )?;
     }
 
     if let Some(search_result) = search_result {
-        write!(
+        writeln!(
             title,
-            "{} ",
+            "{}",
             highlight_text(&item.name, &search_result.snippets.name.highlighted).underline()
         )?;
     } else {
-        write!(title, "{} ", item.name.underline())?;
+        writeln!(title, "  {}", item.name.underline())?;
     };
 
-    write!(
-        title,
-        "({}): ",
-        item.created_at.format("%x").to_string().green()
-    )?;
-
-    // Url
-    if let Some(url) = &item.url {
-        writeln!(title, "{url}")?;
-    } else {
-        writeln!(title, "{}", "no url".italic())?;
-    }
-
     let mut body = String::new();
+
+    writeln!(body, "\t{}", item.id.to_string().dimmed())?;
 
     // Body search result
     if let Some(search_result) = search_result {
@@ -270,6 +281,13 @@ fn item_display_string_inner(
         }
     }
 
+    // Url
+    if let Some(url) = &item.url {
+        writeln!(body, "\t{}{url}", "url: ".bold())?;
+    } else {
+        writeln!(body, "\t{}{}", "url: ".bold(), "no url".italic())?;
+    }
+
     // Comment
     if let Some(comment) = &item.comment {
         let comment = if let Some(search_result) = search_result {
@@ -278,8 +296,16 @@ fn item_display_string_inner(
             comment.italic()
         };
 
-        writeln!(body, "\t{}", comment)?;
+        writeln!(body, "\t{}{}", "comment: ".bold(), comment)?;
     }
+
+    // Created at
+    writeln!(
+        body,
+        "\t{}{}",
+        "created at: ".bold(),
+        item.created_at.format("%x")
+    )?;
 
     // Tags
     if !item.tags.is_empty() {
@@ -304,10 +330,34 @@ fn highlight_text(text: &str, ranges: &[(usize, usize)]) -> String {
 
     for (start, end) in ranges.iter().copied() {
         highlighted_text.push_str(&text[start_from..start]);
-        highlighted_text.push_str(&text[start..end].yellow().to_string());
+        highlighted_text.push_str(&text[start..end].yellow());
         start_from = end;
     }
 
     highlighted_text.push_str(&text[start_from..]);
-    highlighted_text.trim().replace("\n", " ")
+    highlighted_text.trim().replace('\n', " ")
+}
+
+fn ensure_config(config_dir: Option<PathBuf>) -> anyhow::Result<(MonkConfig, PathBuf, bool)> {
+    let config_file = monk::config_file_path(config_dir.as_ref())?;
+    let new_install = !config_file.exists();
+
+    if new_install {
+        println!(
+            "  No monk data could be found. Monk will be initalized in: {}\n",
+            config_file.parent().unwrap().display()
+        );
+    }
+
+    let config = monk::get_or_create_config(config_dir.as_deref())?;
+    Ok((config, config_file, new_install))
+}
+
+fn print_new_install_info(config_file: &Path, config: &MonkConfig) {
+    println!("  Monk successfully initalized!");
+    println!("    config file:\t{}", config_file.display(),);
+    println!("    data dir:\t\t{}", config.data_dir.display());
+    println!("\tindex:\t\t{}", config.index_path().display());
+    println!("\tdownloads:\t{}", config.download_path().display());
+    println!("\tstore:\t\t{}\n", config.store_path().display());
 }
