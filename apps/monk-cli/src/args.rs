@@ -51,7 +51,7 @@ pub enum Command {
         ///
         /// # Examples
         ///
-        /// monk add "This article has tags" https://article.com -t kernel networking rust
+        /// monk add "This article has tags" https://article.com -t kernel -t networking -t srust
         #[clap(short, long)]
         tags: Vec<String>,
     },
