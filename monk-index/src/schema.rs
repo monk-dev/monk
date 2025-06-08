@@ -23,7 +23,7 @@ pub fn current_schema() -> Schema {
     let _ = builder.add_text_field("title", TEXT);
     let _ = builder.add_text_field("extra", TEXT);
     let _ = builder.add_date_field("found", FAST | INDEXED);
-    let _ = builder.add_facet_field("tag", FacetOptions::default().set_stored().set_indexed());
+    let _ = builder.add_facet_field("tag", FacetOptions::default().set_stored());
 
     builder.build()
 }

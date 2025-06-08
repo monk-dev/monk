@@ -27,13 +27,15 @@ impl HtmlDownloader for MonolithDownloader {
         if let Some(url) = item.url.clone() {
             tracing::info!("downloading html in monolith");
 
-            let mut opts = Options::default();
-            opts.base_url = Some(url.clone());
-            opts.charset = Some("UTF-8".to_string());
-            opts.isolate = true;
-            opts.silent = true;
-            opts.timeout = 120;
-            opts.target = file_path.display().to_string();
+            let opts = Options {
+                base_url: Some(url.clone()),
+                charset: Some("UTF-8".to_string()),
+                isolate: true,
+                silent: true,
+                timeout: 120,
+                target: file_path.display().to_string(),
+                ..Default::default()
+            };
 
             let url = url.parse()?;
 

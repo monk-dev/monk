@@ -1,8 +1,6 @@
-cargo build -p monk-cli --release
+cargo build --release -p monk-cli
 
-rm monk.sqlite
-rm -r ./downloads
-rm -r ./index
+rm -r test-install
 
 ./target/release/monk add "As We May Think" seed/data/monolith_as_we_may_think.html "essentially monk but in the 1940's" -t monk old
 ./target/release/monk add "Learning Key-Value Store Design" seed/data/learned_key_value_stores.pdf "Interesting article on dynamic key-value storage designs" -t key-value datastructures
