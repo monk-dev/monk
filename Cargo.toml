@@ -5,3 +5,4 @@ exclude = ["monolith"]
 [profile.release]
 opt-level = 3
 # lto = true
+

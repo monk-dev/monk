@@ -293,7 +293,7 @@ pub fn print_too_many(id: String, possible: Vec<Meta>) {
     print!("{}", meta_table.render());
 }
 
-pub fn create_meta_table<'a>(metas: Vec<Meta>) -> Table<'a> {
+pub fn create_meta_table(metas: Vec<Meta>) -> Table {
     let mut table = Table::new();
     table.max_column_width = 40;
     table.style = TableStyle::rounded();
@@ -497,8 +497,8 @@ fn print_status(status: StatusResponse) {
 }
 
 fn get_byte_unit(bytes: usize) -> byte_unit::AdjustedByte {
-    let byte = byte_unit::Byte::from_bytes(bytes as u128);
-    byte.get_appropriate_unit(false)
+    let byte = byte_unit::Byte::from_u128(bytes as u128).unwrap_or_default();
+    byte.get_appropriate_unit(byte_unit::UnitType::Binary)
 }
 
 pub async fn check_or_spawn(settings: &Settings) -> Result<(), std::io::Error> {

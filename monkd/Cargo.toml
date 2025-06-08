@@ -9,31 +9,31 @@ edition = "2018"
 publish = false
 
 [dependencies]
-async-channel = "*"
+async-channel = "2.3.1"
 async-lock = "1.1.2"
-tokio = { version = "1.2.*", features = ["full"] }
-futures = "*"
-url =   { version = "*", features = ["serde"] }
-chrono = { version = "*", features = ["serde"] }
-anyhow = "*"
-thiserror = "*"
+tokio = { version = "1.44.2", features = ["full"] }
+futures = "0.3.31"
+url = { version = "2.5.4", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+anyhow = "1.0.98"
+thiserror = "2.0.12"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
-serde_yaml = "*"
+serde_json = "1.0.140"
+serde_yaml = "0.9.34"
 rand = "0.7.3"
-tracing = "*"
-tracing-subscriber = { version = "*", default-features = false, features = ["fmt", "parking_lot", "ansi", "env-filter"] }
-tracing-futures = "*"
-tracing-appender = "*"
-config = "*"
-structopt = "*"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", default-features = false, features = ["fmt", "parking_lot", "ansi", "env-filter"] }
+tracing-futures = "0.2.5"
+tracing-appender = "0.2.3"
+config = "0.15.11"
+structopt = "0.3.26"
 warp = "0.3.*"
 tantivy = { git = "https://github.com/tantivy-search/tantivy.git", tag ="0.13.3" }
 monolith = { path = "../monolith" }
 reqwest = "0.11.1"
-directories-next = "*"
-async-trait = "*"
-scraper = "*"
+directories-next = "2.0.0"
+async-trait = "0.1.88"
+scraper = "0.23.1"
 zip = { version = "0.5.11", default-features = false, features = ["deflate"] }
 walkdir = "2.3.1"
 tempfile = "3.2.0"

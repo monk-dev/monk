@@ -60,16 +60,17 @@ impl Settings {
             None
         };
 
-        let mut config = Config::default();
+        let mut config_builder = Config::builder();
 
         if let Some(config_path) = config_path {
-            config.merge(File::with_name(&config_path.to_str().unwrap()))?;
+            config_builder = config_builder.add_source(File::with_name(&config_path.to_str().unwrap()));
             cpath = config_path;
         }
 
-        config.merge(Environment::with_prefix("monk"))?;
+        config_builder = config_builder.add_source(Environment::with_prefix("monk"));
+        let config = config_builder.build()?;
 
-        match config.try_into::<Settings>() {
+        match config.try_deserialize::<Settings>() {
             Ok(mut settings) => {
                 settings.set_config_path(cpath);
                 Ok(settings)

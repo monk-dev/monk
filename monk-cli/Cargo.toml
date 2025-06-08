@@ -13,24 +13,24 @@ name = "monk"
 path = "src/bin/monk.rs"
 
 [dependencies]
-structopt = "*"
-tantivy = "*"
-anyhow = "*"
-thiserror = "*"
-failure = "*"
-colored = "*"
+structopt = "0.3.26"
+tantivy = "0.24.1"
+anyhow = "1.0.98"
+thiserror = "2.0.12"
+failure = "0.1.8"
+colored = "3.0.0"
 monkd = { path = "../monkd" }
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "*"
-config = "*"
+serde_yaml = "0.9.34"
+config = "0.15.11"
 scraper = "0.12.0"
 reqwest = { version = "0.11.1", features = ["json"] }
-tokio = { version = "1.2.*"}
-url = "*"
+tokio = { version = "1.44.2"}
+url = "2.5.4"
 sysinfo = "0.20.0"
-term-table = "*"
+term-table = "1.4.0"
 open = "1"
-byte-unit = "*"
+byte-unit = "5.1.6"
 
 [package.metadata.deb]
 maintainer = ["Fisher Darling <fdarling@mines.edu>", "Liam Warfield <liam.warfield@gmail.com"]
